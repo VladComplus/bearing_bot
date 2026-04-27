@@ -2,6 +2,7 @@ import asyncio
 import logging
 import os
 import re
+import json
 
 from aiogram import Bot, Dispatcher, F
 from aiogram.types import Message, ReplyKeyboardMarkup, KeyboardButton
@@ -12,11 +13,29 @@ from aiogram.fsm.context import FSMContext
 # 🔐 токен и канал
 TOKEN = os.getenv("BOT_TOKEN")
 CHANNEL_ID = -1003955162793
+DB_FILE = "ads.json"
 
 logging.basicConfig(level=logging.INFO)
 
 bot = Bot(token=TOKEN)
 dp = Dispatcher()
+
+# =========================
+# 📦 БАЗА (JSON)
+# =========================
+
+def load_ads():
+    try:
+        with open(DB_FILE, "r", encoding="utf-8") as f:
+            return json.load(f)
+    except:
+        return []
+
+def save_ad(ad):
+    ads = load_ads()
+    ads.append(ad)
+    with open(DB_FILE, "w", encoding="utf-8") as f:
+        json.dump(ads, f, ensure_ascii=False, indent=2)
 
 # =========================
 # 🔒 СТОП-СЛОВА + АНТИ-ОБХОД
@@ -60,6 +79,7 @@ class Form(StatesGroup):
     condition = State()
     price = State()
     phone = State()
+    search = State()
 
 # =========================
 # 🔘 КЛАВИАТУРЫ
@@ -233,8 +253,69 @@ async def get_phone(message: Message, state: FSMContext):
         f"📞 {phone}"
     )
 
+    # 💾 сохраняем в базу
+    ad = {
+        "type": title,
+        "name": data['name'],
+        "quantity": data['quantity'],
+        "condition": condition,
+        "price": data['price'],
+        "phone": phone
+    }
+
+    save_ad(ad)
+
+    # 📢 публикуем
     await bot.send_message(CHANNEL_ID, text)
     await message.answer("✅ Опубликовано", reply_markup=main_kb)
+
+    await state.clear()
+
+# =========================
+# 🔍 ПОИСК
+# =========================
+
+@dp.message(F.text == "📊 Поиск")
+async def search_start(message: Message, state: FSMContext):
+    await message.answer("🔍 Введи что ищешь:")
+    await state.set_state(Form.search)
+
+@dp.message(Form.search)
+async def search_ads(message: Message, state: FSMContext):
+    query = message.text.strip()
+    query_norm = normalize_text(query)
+
+    ads = load_ads()
+    results = []
+
+    for ad in ads:
+        combined = f"{ad['name']} {ad['type']} {ad['condition']} {ad['price']}"
+        combined_norm = normalize_text(combined)
+
+        if query_norm in combined_norm:
+            results.append(ad)
+
+    if not results:
+        await message.answer(
+            "❌ Ничего не найдено\n\n"
+            "🔁 Попробуйте другой запрос"
+        )
+        return
+
+    results = results[:5]
+
+    await message.answer(f"🔍 Найдено: {len(results)}")
+
+    for ad in results:
+        text = (
+            f"{ad['type']}\n\n"
+            f"📦 {ad['name']}\n"
+            f"🔢 Кол-во: {ad['quantity']}\n"
+            f"⚙️ Состояние: {ad['condition']}\n"
+            f"💰 Цена: {ad['price']}\n"
+            f"📞 {ad['phone']}"
+        )
+        await message.answer(text)
 
     await state.clear()
 

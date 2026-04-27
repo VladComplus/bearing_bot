@@ -158,7 +158,7 @@ async def get_condition(message: Message, state: FSMContext):
     if "Куплю" in data['type']:
         await message.answer("💰 Введи цену или выбери:", reply_markup=price_kb_buy)
     else:
-        await message.answer("💰 Введи цену (в грн):")
+        await message.answer("💰 Введи цену (в гривнах):")
 
     await state.set_state(Form.price)
 

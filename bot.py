@@ -4,7 +4,9 @@ from aiogram import Bot, Dispatcher
 from aiogram.types import Message
 from aiogram.filters import Command
 
-TOKEN = "8759403185:AAHZmN6hWzexMB_Ph5W8AZ6iBmhhMT7Bkrk"
+import os
+
+TOKEN = os.getenv("BOT_TOKEN")
 
 logging.basicConfig(level=logging.INFO)
 

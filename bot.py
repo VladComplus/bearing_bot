@@ -16,7 +16,7 @@ dp = Dispatcher()
 @dp.message(Command("start"))
 async def start(message: Message):
     await message.answer("Бот запущен 🚀")
-    @dp.message()
+@dp.message()
 async def debug(message: Message):
     print(message.chat.id)
 

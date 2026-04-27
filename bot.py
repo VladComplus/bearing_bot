@@ -7,6 +7,7 @@ from aiogram.types import Message
 from aiogram.filters import Command
 
 TOKEN = os.getenv("BOT_TOKEN")
+CHANNEL_ID = -1003955162793  # <-- твой канал
 
 logging.basicConfig(level=logging.INFO)
 
@@ -16,17 +17,24 @@ dp = Dispatcher()
 
 @dp.message(Command("start"))
 async def start(message: Message):
-    await message.answer("Бот запущен 🚀")
+    await message.answer("Отправь объявление — я опубликую его в канал 📢")
 
 
+# 📢 ПУБЛИКАЦИЯ ОБЪЯВЛЕНИЯ
 @dp.message()
-async def debug(message: Message):
-    print("USER CHAT ID:", message.chat.id)
+async def publish(message: Message):
+    text = message.text
 
+    post = f"""
+📢 НОВОЕ ОБЪЯВЛЕНИЕ
 
-@dp.channel_post()
-async def get_channel_id(message: Message):
-    print("CHANNEL ID:", message.chat.id)
+{text}
+
+👤 @{message.from_user.username or 'без ника'}
+"""
+
+    await bot.send_message(CHANNEL_ID, post)
+    await message.answer("✅ Объявление опубликовано")
 
 
 async def main():

@@ -70,30 +70,22 @@ async def get_qty(message: Message, state: FSMContext):
 @dp.message(Form.condition)
 async def get_condition(message: Message, state: FSMContext):
     await state.update_data(condition=message.text)
-    await message.answer("💰 Введи цену:")
-    await state.set_state(Form.price)
-
-
-# 💰 Цена
-@dp.message(Form.condition)
-async def get_condition(message: Message, state: FSMContext):
-    await state.update_data(condition=message.text)
     await message.answer("💰 Введи цену (в гривнах):")
     await state.set_state(Form.price)
 
 
+# 💰 Цена
 @dp.message(Form.price)
 async def get_price(message: Message, state: FSMContext):
     price_input = message.text.strip()
 
-    # 🔍 убираем всё кроме цифр
     digits = ''.join(filter(str.isdigit, price_input))
 
     if not digits:
         await message.answer("❌ Введи цену числом, например: 100")
         return
 
-    price = f"{digits} грн."
+    price = f"{digits} грн"
 
     await state.update_data(price=price)
     data = await state.get_data()

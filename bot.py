@@ -3,6 +3,7 @@ import logging
 import os
 import re
 import json
+from datetime import datetime
 
 from aiogram import Bot, Dispatcher, F
 from aiogram.types import Message, ReplyKeyboardMarkup, KeyboardButton
@@ -21,7 +22,7 @@ bot = Bot(token=TOKEN)
 dp = Dispatcher()
 
 # =========================
-# 📦 БАЗА (JSON)
+# 📦 БАЗА
 # =========================
 
 def load_ads():
@@ -38,7 +39,7 @@ def save_ad(ad):
         json.dump(ads, f, ensure_ascii=False, indent=2)
 
 # =========================
-# 🔒 СТОП-СЛОВА + АНТИ-ОБХОД
+# 🔒 СТОП-СЛОВА
 # =========================
 
 def load_stop_words():
@@ -80,6 +81,7 @@ class Form(StatesGroup):
     price = State()
     phone = State()
     search = State()
+    sort = State()
 
 # =========================
 # 🔘 КЛАВИАТУРЫ
@@ -104,6 +106,14 @@ condition_kb = ReplyKeyboardMarkup(
 price_kb_buy = ReplyKeyboardMarkup(
     keyboard=[
         [KeyboardButton(text="💰 Договорная")]
+    ],
+    resize_keyboard=True
+)
+
+sort_kb = ReplyKeyboardMarkup(
+    keyboard=[
+        [KeyboardButton(text="🆕 Новые")],
+        [KeyboardButton(text="💸 Дешевые"), KeyboardButton(text="💰 Дорогие")]
     ],
     resize_keyboard=True
 )
@@ -136,19 +146,11 @@ async def get_name(message: Message, state: FSMContext):
     name = message.text.strip()
 
     if len(name) > 32:
-        await message.answer(
-            "❌ Максимум 32 символа\n\n"
-            "🔁 Повторите ввод\n"
-            "📌 Введите наименование:"
-        )
+        await message.answer("❌ Максимум 32 символа\n\n🔁 Повторите ввод\n📌 Введите наименование:")
         return
 
     if contains_stop_word(name):
-        await message.answer(
-            "❌ Запрещённые слова\n\n"
-            "🔁 Повторите ввод\n"
-            "📌 Введите наименование:"
-        )
+        await message.answer("❌ Запрещённые слова\n\n🔁 Повторите ввод\n📌 Введите наименование:")
         return
 
     await state.update_data(name=name)
@@ -164,11 +166,7 @@ async def get_quantity(message: Message, state: FSMContext):
     qty = message.text.strip()
 
     if not qty.isdigit():
-        await message.answer(
-            "❌ Только цифры\n\n"
-            "🔁 Повторите ввод\n"
-            "🔢 Введите количество:"
-        )
+        await message.answer("❌ Только цифры\n\n🔁 Повторите ввод\n🔢 Введите количество:")
         return
 
     await state.update_data(quantity=qty)
@@ -206,11 +204,7 @@ async def get_price(message: Message, state: FSMContext):
         digits = ''.join(filter(str.isdigit, price_input))
 
         if not digits:
-            await message.answer(
-                "❌ Введи цену цифрами\n\n"
-                "🔁 Повторите ввод\n"
-                "💰 Введите цену:"
-            )
+            await message.answer("❌ Введи цену цифрами\n\n🔁 Повторите ввод\n💰 Введите цену:")
             return
 
         price = f"{digits} грн"
@@ -229,11 +223,7 @@ async def get_phone(message: Message, state: FSMContext):
     phone = message.text.strip()
 
     if not re.fullmatch(r"0\d{9}", phone):
-        await message.answer(
-            "❌ Неверный формат\n\n"
-            "🔁 Повторите ввод\n"
-            "📞 Введите номер (0501234567):"
-        )
+        await message.answer("❌ Неверный формат\n\n🔁 Повторите ввод\n📞 Введите номер (0501234567):")
         return
 
     phone = "+38" + phone
@@ -244,28 +234,32 @@ async def get_phone(message: Message, state: FSMContext):
     title = "📢 ПРОДАМ" if "Продам" in data['type'] else "💵 КУПЛЮ"
     condition = data['condition'].replace("🆕 ", "").replace("♻️ ", "").lower()
 
+    now = datetime.now().strftime("%d.%m.%Y %H:%M")
+    price_value = int(''.join(filter(str.isdigit, data['price']))) if data['price'] != "договорная" else 0
+
     text = (
         f"{title}\n\n"
         f"📦 {data['name']}\n"
         f"🔢 Кол-во: {data['quantity']}\n"
         f"⚙️ Состояние: {condition}\n"
         f"💰 Цена: {data['price']}\n"
-        f"📞 {phone}"
+        f"📞 {phone}\n"
+        f"🕒 {now}"
     )
 
-    # 💾 сохраняем в базу
     ad = {
         "type": title,
         "name": data['name'],
         "quantity": data['quantity'],
         "condition": condition,
         "price": data['price'],
-        "phone": phone
+        "price_value": price_value,
+        "phone": phone,
+        "date": now
     }
 
     save_ad(ad)
 
-    # 📢 публикуем
     await bot.send_message(CHANNEL_ID, text)
     await message.answer("✅ Опубликовано", reply_markup=main_kb)
 
@@ -296,24 +290,46 @@ async def search_ads(message: Message, state: FSMContext):
             results.append(ad)
 
     if not results:
-        await message.answer(
-            "❌ Ничего не найдено\n\n"
-            "🔁 Попробуйте другой запрос"
-        )
+        await message.answer("❌ Ничего не найдено\n\n🔁 Попробуйте другой запрос")
         return
 
-    results = results[:5]
+    results = list(reversed(results))
+    await state.update_data(results=results)
 
-    await message.answer(f"🔍 Найдено: {len(results)}")
+    await message.answer(f"🔍 Найдено: {len(results)}\n\nВыбери сортировку:", reply_markup=sort_kb)
+    await state.set_state(Form.sort)
 
-    for ad in results:
+# =========================
+# 🔄 СОРТИРОВКА
+# =========================
+
+@dp.message(Form.sort)
+async def sort_results(message: Message, state: FSMContext):
+    data = await state.get_data()
+    results = data.get("results", [])
+
+    if message.text == "💸 Дешевые":
+        results = sorted(results, key=lambda x: x.get("price_value", 0))
+
+    elif message.text == "💰 Дорогие":
+        results = sorted(results, key=lambda x: x.get("price_value", 0), reverse=True)
+
+    elif message.text == "🆕 Новые":
+        results = list(reversed(results))
+
+    else:
+        await message.answer("❌ Выбери кнопку")
+        return
+
+    for ad in results[:5]:
         text = (
             f"{ad['type']}\n\n"
             f"📦 {ad['name']}\n"
             f"🔢 Кол-во: {ad['quantity']}\n"
             f"⚙️ Состояние: {ad['condition']}\n"
             f"💰 Цена: {ad['price']}\n"
-            f"📞 {ad['phone']}"
+            f"📞 {ad['phone']}\n"
+            f"🕒 {ad.get('date', '')}"
         )
         await message.answer(text)
 

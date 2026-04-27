@@ -1,3 +1,16 @@
+import os
+import sys
+
+LOCK_FILE = "/tmp/bot.lock"
+
+if os.path.exists(LOCK_FILE):
+    print("❌ БОТ УЖЕ ЗАПУЩЕН - ВЫХОД")
+    sys.exit()
+
+with open(LOCK_FILE, "w") as f:
+    f.write("running")
+
+print("✅ БОТ СТАРТОВАЛ ОДИН РАЗ")
 import asyncio
 import logging
 from aiogram import Bot, Dispatcher

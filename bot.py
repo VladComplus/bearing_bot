@@ -24,6 +24,7 @@ class Form(StatesGroup):
     qty = State()
     condition = State()
     price = State()
+    phone = State()
 
 
 # 📌 Клавиатура
@@ -88,6 +89,10 @@ async def get_price(message: Message, state: FSMContext):
     price = f"{digits} грн"
 
     await state.update_data(price=price)
+
+    # 👉 ВАЖНО: переход к следующему шагу
+    await message.answer("📞 Введи номер телефона (например: 0501234567)")
+    await state.set_state(Form.phone)
     data = await state.get_data()
 
     post = f"""

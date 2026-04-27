@@ -2,12 +2,14 @@ import asyncio
 import logging
 import os
 
-from aiogram import Bot, Dispatcher
-from aiogram.types import Message
+from aiogram import Bot, Dispatcher, F
+from aiogram.types import Message, ReplyKeyboardMarkup, KeyboardButton
 from aiogram.filters import Command
+from aiogram.fsm.state import State, StatesGroup
+from aiogram.fsm.context import FSMContext
 
 TOKEN = os.getenv("BOT_TOKEN")
-CHANNEL_ID = -1003955162793  # <-- твой канал
+CHANNEL_ID = -1003955162793
 
 logging.basicConfig(level=logging.INFO)
 
@@ -15,26 +17,91 @@ bot = Bot(token=TOKEN)
 dp = Dispatcher()
 
 
+# 📌 Состояния
+class Form(StatesGroup):
+    type = State()
+    name = State()
+    qty = State()
+    condition = State()
+    price = State()
+
+
+# 📌 Клавиатура
+menu = ReplyKeyboardMarkup(
+    keyboard=[
+        [KeyboardButton(text="Продам"), KeyboardButton(text="Куплю")],
+        [KeyboardButton(text="Поиск")]
+    ],
+    resize_keyboard=True
+)
+
+
+# ▶️ Старт
 @dp.message(Command("start"))
 async def start(message: Message):
-    await message.answer("Отправь объявление — я опубликую его в канал 📢")
+    await message.answer("Выбери действие:", reply_markup=menu)
 
 
-# 📢 ПУБЛИКАЦИЯ ОБЪЯВЛЕНИЯ
-@dp.message()
-async def publish(message: Message):
-    text = message.text
+# 🔘 Продам / Куплю
+@dp.message(F.text.in_(["Продам", "Куплю"]))
+async def choose_type(message: Message, state: FSMContext):
+    await state.update_data(type=message.text)
+    await message.answer("📦 Введи наименование:")
+    await state.set_state(Form.name)
+
+
+# 📦 Наименование
+@dp.message(Form.name)
+async def get_name(message: Message, state: FSMContext):
+    await state.update_data(name=message.text)
+    await message.answer("🔢 Введи количество:")
+    await state.set_state(Form.qty)
+
+
+# 🔢 Количество
+@dp.message(Form.qty)
+async def get_qty(message: Message, state: FSMContext):
+    await state.update_data(qty=message.text)
+    await message.answer("⚙️ Состояние (новый / б/у):")
+    await state.set_state(Form.condition)
+
+
+# ⚙️ Состояние
+@dp.message(Form.condition)
+async def get_condition(message: Message, state: FSMContext):
+    await state.update_data(condition=message.text)
+    await message.answer("💰 Введи цену:")
+    await state.set_state(Form.price)
+
+
+# 💰 Цена → публикация
+@dp.message(Form.price)
+async def get_price(message: Message, state: FSMContext):
+    await state.update_data(price=message.text)
+
+    data = await state.get_data()
 
     post = f"""
-📢 НОВОЕ ОБЪЯВЛЕНИЕ
+📢 {data['type'].upper()}
 
-{text}
+📦 {data['name']}
+🔢 Кол-во: {data['qty']}
+⚙️ Состояние: {data['condition']}
+💰 Цена: {data['price']}
 
 👤 @{message.from_user.username or 'без ника'}
 """
 
     await bot.send_message(CHANNEL_ID, post)
-    await message.answer("✅ Объявление опубликовано")
+    await message.answer("✅ Объявление опубликовано", reply_markup=menu)
+
+    await state.clear()
+
+
+# 🔍 Поиск (пока заглушка)
+@dp.message(F.text == "Поиск")
+async def search(message: Message):
+    await message.answer("🔍 Поиск скоро добавим")
 
 
 async def main():

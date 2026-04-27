@@ -18,6 +18,17 @@ logging.basicConfig(level=logging.INFO)
 bot = Bot(token=TOKEN)
 dp = Dispatcher()
 
+# 📁 загрузка стоп-слов
+def load_stop_words():
+    try:
+        with open("stop_words.txt", "r", encoding="utf-8") as f:
+            words = f.read().lower().split(",")
+            return [w.strip() for w in words if w.strip()]
+    except:
+        return []
+
+STOP_WORDS = load_stop_words()
+
 # 📌 Состояния
 class Form(StatesGroup):
     type = State()
@@ -27,7 +38,7 @@ class Form(StatesGroup):
     price = State()
     phone = State()
 
-# 🔘 Главное меню
+# 🔘 Клавиатуры
 main_kb = ReplyKeyboardMarkup(
     keyboard=[
         [KeyboardButton(text="📢 Продам")],
@@ -37,7 +48,6 @@ main_kb = ReplyKeyboardMarkup(
     resize_keyboard=True
 )
 
-# 🔘 Состояние
 condition_kb = ReplyKeyboardMarkup(
     keyboard=[
         [KeyboardButton(text="🆕 Новый"), KeyboardButton(text="♻️ Б/У")]
@@ -45,7 +55,6 @@ condition_kb = ReplyKeyboardMarkup(
     resize_keyboard=True
 )
 
-# 🔘 Цена для КУПЛЮ
 price_kb_buy = ReplyKeyboardMarkup(
     keyboard=[
         [KeyboardButton(text="💰 Договорная")]
@@ -59,24 +68,42 @@ async def start(message: Message, state: FSMContext):
     await state.clear()
     await message.answer("Выбери действие:", reply_markup=main_kb)
 
-# 📢 Продам / 💵 Куплю
+# 📢 / 💵
 @dp.message(F.text.in_(["📢 Продам", "💵 Куплю"]))
 async def choose_type(message: Message, state: FSMContext):
     await state.update_data(type=message.text)
-    await message.answer("📌 Введи наименование:")
+    await message.answer("📌 Введи наименование (до 32 символов):")
     await state.set_state(Form.name)
 
-# 📌 Наименование
+# 📌 Наименование (СТОП-СЛОВА + ДЛИНА)
 @dp.message(Form.name)
 async def get_name(message: Message, state: FSMContext):
-    await state.update_data(name=message.text)
+    name = message.text.strip()
+
+    if len(name) > 32:
+        await message.answer("❌ Слишком длинное название (макс 32 символа)")
+        return
+
+    name_lower = name.lower()
+    for word in STOP_WORDS:
+        if word in name_lower:
+            await message.answer("❌ Запрещённые слова в названии")
+            return
+
+    await state.update_data(name=name)
     await message.answer("🔢 Введи количество:")
     await state.set_state(Form.quantity)
 
-# 🔢 Количество
+# 🔢 Количество (ТОЛЬКО ЦИФРЫ)
 @dp.message(Form.quantity)
 async def get_quantity(message: Message, state: FSMContext):
-    await state.update_data(quantity=message.text)
+    qty = message.text.strip()
+
+    if not qty.isdigit():
+        await message.answer("❌ Введи только цифры")
+        return
+
+    await state.update_data(quantity=qty)
     await message.answer("⚙️ Выбери состояние:", reply_markup=condition_kb)
     await state.set_state(Form.condition)
 
@@ -87,7 +114,6 @@ async def get_condition(message: Message, state: FSMContext):
 
     data = await state.get_data()
 
-    # если КУПЛЮ → даем кнопку "договорная"
     if "Куплю" in data['type']:
         await message.answer("💰 Введи цену или выбери:", reply_markup=price_kb_buy)
     else:
@@ -100,21 +126,20 @@ async def get_condition(message: Message, state: FSMContext):
 async def get_price(message: Message, state: FSMContext):
     price_input = message.text.strip()
 
-    # если договорная
     if price_input == "💰 Договорная":
         price = "договорная"
     else:
         digits = ''.join(filter(str.isdigit, price_input))
 
         if not digits:
-            await message.answer("❌ Введи цену числом или нажми 'Договорная'")
+            await message.answer("❌ Введи цену цифрами")
             return
 
         price = f"{digits} грн"
 
     await state.update_data(price=price)
 
-    await message.answer("📞 Введи номер телефона (пример: 0501234567)")
+    await message.answer("📞 Введи номер (пример: 0501234567)")
     await state.set_state(Form.phone)
 
 # 📞 Телефон
@@ -131,13 +156,8 @@ async def get_phone(message: Message, state: FSMContext):
     await state.update_data(phone=phone)
     data = await state.get_data()
 
-    # заголовок
-    if "Продам" in data['type']:
-        title = "📢 ПРОДАМ"
-    else:
-        title = "💵 КУПЛЮ"
+    title = "📢 ПРОДАМ" if "Продам" in data['type'] else "💵 КУПЛЮ"
 
-    # состояние без эмодзи
     condition = data['condition'].replace("🆕 ", "").replace("♻️ ", "").lower()
 
     text = (
@@ -150,7 +170,7 @@ async def get_phone(message: Message, state: FSMContext):
     )
 
     await bot.send_message(CHANNEL_ID, text)
-    await message.answer("✅ Объявление опубликовано!", reply_markup=main_kb)
+    await message.answer("✅ Опубликовано", reply_markup=main_kb)
 
     await state.clear()
 

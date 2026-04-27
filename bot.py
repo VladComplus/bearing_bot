@@ -1,23 +1,10 @@
-import os
-import sys
-
-LOCK_FILE = "/tmp/bot.lock"
-
-if os.path.exists(LOCK_FILE):
-    print("❌ БОТ УЖЕ ЗАПУЩЕН - ВЫХОД")
-    sys.exit()
-
-with open(LOCK_FILE, "w") as f:
-    f.write("running")
-
-print("✅ БОТ СТАРТОВАЛ ОДИН РАЗ")
 import asyncio
 import logging
+import os
+
 from aiogram import Bot, Dispatcher
 from aiogram.types import Message
 from aiogram.filters import Command
-
-import os
 
 TOKEN = os.getenv("BOT_TOKEN")
 
@@ -26,24 +13,27 @@ logging.basicConfig(level=logging.INFO)
 bot = Bot(token=TOKEN)
 dp = Dispatcher()
 
+
 @dp.message(Command("start"))
 async def start(message: Message):
     await message.answer("Бот запущен 🚀")
+
+
 @dp.message()
 async def debug(message: Message):
-    print(message.chat.id)
+    print("USER CHAT ID:", message.chat.id)
 
-async def main():
-    print("БОТ СТАРТОВАЛ")
-    await dp.start_polling(bot)
-
-if __name__ == "__main__":
-    asyncio.run(main())
-async def main():
-    await bot.delete_webhook(drop_pending_updates=True)
-    await dp.start_polling(bot)
-from aiogram.types import Message
 
 @dp.channel_post()
 async def get_channel_id(message: Message):
     print("CHANNEL ID:", message.chat.id)
+
+
+async def main():
+    print("БОТ СТАРТОВАЛ")
+    await bot.delete_webhook(drop_pending_updates=True)
+    await dp.start_polling(bot)
+
+
+if __name__ == "__main__":
+    asyncio.run(main())

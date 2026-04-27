@@ -31,7 +31,6 @@ def load_stop_words():
 
 STOP_WORDS = load_stop_words()
 
-# 🔄 замена похожих символов (обходы)
 CHAR_MAP = str.maketrans({
     "a": "а", "e": "е", "o": "о", "p": "р", "c": "с", "y": "у", "x": "х",
     "A": "а", "E": "е", "O": "о", "P": "р", "C": "с", "Y": "у", "X": "х"
@@ -40,12 +39,11 @@ CHAR_MAP = str.maketrans({
 def normalize_text(text: str) -> str:
     text = text.lower()
     text = text.translate(CHAR_MAP)
-    text = re.sub(r"[^а-я0-9]", "", text)  # убираем символы типа *, -, пробелы
+    text = re.sub(r"[^а-я0-9]", "", text)
     return text
 
 def contains_stop_word(text: str) -> bool:
     normalized = normalize_text(text)
-
     for word in STOP_WORDS:
         if normalize_text(word) in normalized:
             return True
@@ -118,11 +116,19 @@ async def get_name(message: Message, state: FSMContext):
     name = message.text.strip()
 
     if len(name) > 32:
-        await message.answer("❌ Максимум 32 символа")
+        await message.answer(
+            "❌ Максимум 32 символа\n\n"
+            "🔁 Повторите ввод\n"
+            "📌 Введите наименование:"
+        )
         return
 
     if contains_stop_word(name):
-        await message.answer("❌ Запрещённые слова")
+        await message.answer(
+            "❌ Запрещённые слова\n\n"
+            "🔁 Повторите ввод\n"
+            "📌 Введите наименование:"
+        )
         return
 
     await state.update_data(name=name)
@@ -138,7 +144,11 @@ async def get_quantity(message: Message, state: FSMContext):
     qty = message.text.strip()
 
     if not qty.isdigit():
-        await message.answer("❌ Только цифры")
+        await message.answer(
+            "❌ Только цифры\n\n"
+            "🔁 Повторите ввод\n"
+            "🔢 Введите количество:"
+        )
         return
 
     await state.update_data(quantity=qty)
@@ -158,7 +168,7 @@ async def get_condition(message: Message, state: FSMContext):
     if "Куплю" in data['type']:
         await message.answer("💰 Введи цену или выбери:", reply_markup=price_kb_buy)
     else:
-        await message.answer("💰 Введи цену (в гривнах):")
+        await message.answer("💰 Введи цену (в грн):")
 
     await state.set_state(Form.price)
 
@@ -176,7 +186,11 @@ async def get_price(message: Message, state: FSMContext):
         digits = ''.join(filter(str.isdigit, price_input))
 
         if not digits:
-            await message.answer("❌ Введи цену цифрами")
+            await message.answer(
+                "❌ Введи цену цифрами\n\n"
+                "🔁 Повторите ввод\n"
+                "💰 Введите цену:"
+            )
             return
 
         price = f"{digits} грн"
@@ -195,7 +209,11 @@ async def get_phone(message: Message, state: FSMContext):
     phone = message.text.strip()
 
     if not re.fullmatch(r"0\d{9}", phone):
-        await message.answer("❌ Формат: 0501234567")
+        await message.answer(
+            "❌ Неверный формат\n\n"
+            "🔁 Повторите ввод\n"
+            "📞 Введите номер (0501234567):"
+        )
         return
 
     phone = "+38" + phone
@@ -204,7 +222,6 @@ async def get_phone(message: Message, state: FSMContext):
     data = await state.get_data()
 
     title = "📢 ПРОДАМ" if "Продам" in data['type'] else "💵 КУПЛЮ"
-
     condition = data['condition'].replace("🆕 ", "").replace("♻️ ", "").lower()
 
     text = (

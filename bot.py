@@ -168,6 +168,11 @@ async def choose_type(message: Message, state: FSMContext):
 async def get_name(message: Message, state: FSMContext):
     raw_name = message.text
     name = clean_name(raw_name)
+    
+    print("RAW:", raw_name)
+    print("CLEAN:", name)
+    print("DIGITS:", re.findall(r"\d", name))
+    print("COUNT:", len(re.findall(r"\d", name)))
 
     if len(name) == 0 or len(name) > 32:
         await message.answer("❌ Ошибка ввода. Повторите ввод.")

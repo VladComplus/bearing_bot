@@ -1,4 +1,4 @@
-# FULL BOT WITH MODERATION BUTTONS
+# FINAL BOT WITH MODERATION + CORRECT PRICE LOGIC
 
 import asyncio
 import logging
@@ -8,14 +8,18 @@ import json
 from datetime import datetime
 
 from aiogram import Bot, Dispatcher, F
-from aiogram.types import Message, ReplyKeyboardMarkup, KeyboardButton, InlineKeyboardMarkup, InlineKeyboardButton, CallbackQuery
+from aiogram.types import (
+    Message, ReplyKeyboardMarkup, KeyboardButton,
+    InlineKeyboardMarkup, InlineKeyboardButton,
+    CallbackQuery, ReplyKeyboardRemove
+)
 from aiogram.filters import Command
 from aiogram.fsm.state import StatesGroup, State
 from aiogram.fsm.context import FSMContext
 
 TOKEN = os.getenv("BOT_TOKEN")
 CHANNEL_ID = -1003955162793
-ADMIN_ID = 1833282667  # <-- ВСТАВЬ СВОЙ ID
+ADMIN_ID = 123456789  # <-- ВСТАВЬ СВОЙ ID
 DB_FILE = "ads.json"
 
 logging.basicConfig(level=logging.INFO)
@@ -114,6 +118,11 @@ condition_kb = ReplyKeyboardMarkup(
     resize_keyboard=True
 )
 
+price_kb_buy = ReplyKeyboardMarkup(
+    keyboard=[[KeyboardButton(text="💰 Договорная")]],
+    resize_keyboard=True
+)
+
 # =========================
 # START
 # =========================
@@ -164,17 +173,39 @@ async def get_qty(message: Message, state: FSMContext):
 @dp.message(Form.condition)
 async def get_cond(message: Message, state: FSMContext):
     await state.update_data(condition=message.text)
-    await message.answer("Цена:")
+    data = await state.get_data()
+
+    if "Куплю" in data['type']:
+        await message.answer(
+            "💰 Введите цену или выберите:",
+            reply_markup=price_kb_buy
+        )
+    else:
+        await message.answer(
+            "💰 Введите цену в гривнах:",
+            reply_markup=ReplyKeyboardRemove()
+        )
+
     await state.set_state(Form.price)
 
 @dp.message(Form.price)
 async def get_price(message: Message, state: FSMContext):
-    digits = ''.join(filter(str.isdigit, message.text))
-    if not digits:
-        await message.answer("❌ Ошибка")
-        return
+    price_input = message.text.strip()
 
-    await state.update_data(price=f"{digits} грн", price_value=int(digits))
+    if price_input == "💰 Договорная":
+        price = "договорная"
+        price_value = 0
+    else:
+        digits = ''.join(filter(str.isdigit, price_input))
+
+        if not digits:
+            await message.answer("❌ Ошибка ввода")
+            return
+
+        price = f"{digits} грн"
+        price_value = int(digits)
+
+    await state.update_data(price=price, price_value=price_value)
     await message.answer("Телефон:")
     await state.set_state(Form.phone)
 
@@ -229,7 +260,6 @@ async def get_phone(message: Message, state: FSMContext):
 async def approve(callback: CallbackQuery):
     ad_id = int(callback.data.split("_")[1])
     ads = load_ads()
-
     ad = ads[ad_id]
 
     text = (
@@ -254,9 +284,11 @@ async def reject(callback: CallbackQuery):
 # =========================
 
 async def main():
+    print("БОТ СТАРТОВАЛ")
     await bot.delete_webhook(drop_pending_updates=True)
     await dp.start_polling(bot)
 
 if __name__ == "__main__":
     asyncio.run(main())
+
 

@@ -1,11 +1,11 @@
-# FINAL VERSION V3 (fixed UX + moderation)
+# FINAL VERSION V4 (fix stop-words + correct logic SKF)
 
 import asyncio
 import logging
 import os
 import re
 import json
-from datetime import datetime, timedelta
+from datetime import datetime
 
 from aiogram import Bot, Dispatcher, F
 from aiogram.types import (
@@ -20,8 +20,8 @@ from aiogram.fsm.context import FSMContext
 TOKEN = os.getenv("BOT_TOKEN")
 CHANNEL_ID = -1003955162793
 ADMIN_ID = 1833282667
-DB_FILE = "ads.json"
 ADMIN_USERNAME = "blackberrySE"
+DB_FILE = "ads.json"
 
 logging.basicConfig(level=logging.INFO)
 
@@ -45,7 +45,7 @@ def save_ads(ads):
         json.dump(ads, f, ensure_ascii=False, indent=2)
 
 # =========================
-# СПРАВОЧНИК
+# DB NAMES
 # =========================
 
 def load_db_names():
@@ -58,24 +58,53 @@ def load_db_names():
 DB_NAMES = load_db_names()
 
 # =========================
-# УТИЛИТЫ
+# STOP WORDS
 # =========================
 
-def normalize(text):
-    return re.sub(r"[^a-z0-9а-яё]", "", text.lower())
+def load_stop_words():
+    try:
+        with open("stop_words.txt", "r", encoding="utf-8") as f:
+            return [line.strip().lower() for line in f if line.strip()]
+    except:
+        return []
 
+STOP_WORDS = load_stop_words()
+
+CHAR_MAP = str.maketrans({
+    "a": "а", "e": "е", "o": "о", "p": "р", "c": "с", "y": "у", "x": "х",
+    "A": "а", "E": "е", "O": "о", "P": "р", "C": "с", "Y": "у", "X": "х"
+})
+
+
+def normalize_text(text: str) -> str:
+    text = text.lower()
+    text = text.translate(CHAR_MAP)
+    text = re.sub(r"[^а-я0-9]", "", text)
+    return text
+
+
+def contains_stop_word(text: str) -> bool:
+    norm = normalize_text(text)
+    for word in STOP_WORDS:
+        if normalize_text(word) in norm:
+            return True
+    return False
+
+# =========================
+# LOGIC
+# =========================
 
 def has_min_two_digits(text):
     return len(re.findall(r"\d", text)) >= 2
 
 
 def matches_db(name):
-    n = normalize(name)
-    return any(normalize(x) in n or n in normalize(x) for x in DB_NAMES)
-
-
-def contains_link(text):
-    return any(x in text.lower() for x in ["http", "www", ".com", ".ru", ".net"])
+    n = normalize_text(name)
+    for item in DB_NAMES:
+        ni = normalize_text(item)
+        if ni in n or n in ni:
+            return True
+    return False
 
 
 def generate_id(ads):
@@ -143,12 +172,19 @@ async def choose_type(message: Message, state: FSMContext):
 async def get_name(message: Message, state: FSMContext):
     name = message.text.strip()
 
+    # 1. минимум 2 цифры
     if not has_min_two_digits(name):
+        await message.answer("❌ Ошибка ввод")
+        return
+
+    # 2. стоп слова
+    if contains_stop_word(name):
         await message.answer("❌ Ошибка ввод")
         return
 
     await state.update_data(name=name)
 
+    # 3. база (если нет → модерация)
     if not matches_db(name):
         await state.update_data(moderation=True)
     else:
@@ -185,16 +221,14 @@ async def get_price(message: Message, state: FSMContext):
 
     if text == "💰 Договорная":
         price = "договорная"
-        price_value = 0
     else:
         digits = ''.join(filter(str.isdigit, text))
         if not digits:
             await message.answer("❌ Ошибка")
             return
         price = f"{digits} грн"
-        price_value = int(digits)
 
-    await state.update_data(price=price, price_value=price_value)
+    await state.update_data(price=price)
     await message.answer("Телефон:")
     await state.set_state(Form.phone)
 
@@ -219,20 +253,14 @@ async def get_desc(message: Message, state: FSMContext):
         await message.answer("❌ Слишком длинный текст")
         return
 
-    if contains_link(desc):
-        await message.answer("❌ Ссылки запрещены")
-        return
-
     data = await state.get_data()
     ads = load_ads()
 
     ad_id = generate_id(ads)
 
-    now = datetime.now()
+    now = datetime.now().strftime('%d.%m.%Y %H:%M')
 
     condition = data['condition'].replace("🆕 ", "").replace("♻️ ", "").lower()
-
-    short_desc = desc.split("\n")[0] if desc else ""
 
     text = (
         f"{data['type']}\n\n"
@@ -241,29 +269,22 @@ async def get_desc(message: Message, state: FSMContext):
         f"⚙️ Состояние: {condition}\n"
         f"💰 Цена: {data['price']}\n"
         f"📞 {data['phone']}\n"
+        f"🕒 {now}        {ad_id}"
     )
 
-    if short_desc:
-        text += f"📄 {short_desc}...\n"
-
-    text += f"🕒 {now.strftime('%d.%m.%Y %H:%M')}        {ad_id}"
-
-    ad = {**data, "desc": desc, "id": ad_id}
-
-    ads.append(ad)
+    ads.append({**data, "id": ad_id, "desc": desc})
     save_ads(ads)
-
-    # КНОПКИ МОДЕРАЦИИ
-    mod_kb = InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text="✅ Одобрить", callback_data=f"approve_{ad_id}"),
-         InlineKeyboardButton(text="❌ Отклонить", callback_data=f"reject_{ad_id}")]
-    ])
 
     read_kb = InlineKeyboardMarkup(inline_keyboard=[
         [InlineKeyboardButton(text="📖 Читать", callback_data=f"read_{ad_id}")]
     ])
 
     if data.get("moderation"):
+        mod_kb = InlineKeyboardMarkup(inline_keyboard=[
+            [InlineKeyboardButton(text="✅ Одобрить", callback_data=f"approve_{ad_id}"),
+             InlineKeyboardButton(text="❌ Отклонить", callback_data=f"reject_{ad_id}")]
+        ])
+
         await bot.send_message(ADMIN_ID, text + "\n\n⏳ На модерации", reply_markup=mod_kb)
         await message.answer("⏳ На модерации", reply_markup=ReplyKeyboardRemove())
     else:
@@ -271,46 +292,6 @@ async def get_desc(message: Message, state: FSMContext):
         await message.answer("✅ Опубликовано", reply_markup=ReplyKeyboardRemove())
 
     await state.clear()
-
-# =========================
-# MODERATION ACTIONS
-# =========================
-
-@dp.callback_query(F.data.startswith("approve_"))
-async def approve(callback: CallbackQuery):
-    ad_id = callback.data.split("_")[1]
-    ads = load_ads()
-
-    for ad in ads:
-        if ad["id"] == ad_id:
-            text = f"📢 Продам\n\n📦 {ad['name']}\n🔢 Кол-во: {ad['quantity']}\n⚙️ Состояние: {ad['condition']}\n💰 Цена: {ad['price']}\n📞 {ad['phone']}\n🕒 {ad_id}"
-
-            await bot.send_message(CHANNEL_ID, text)
-
-    await callback.message.edit_text("✅ Одобрено")
-
-@dp.callback_query(F.data.startswith("reject_"))
-async def reject(callback: CallbackQuery):
-    await callback.message.edit_text("❌ Отклонено")
-
-# =========================
-# READ
-# =========================
-
-@dp.callback_query(F.data.startswith("read_"))
-async def read(callback: CallbackQuery):
-    ad_id = callback.data.split("_")[1]
-    ads = load_ads()
-
-    for ad in ads:
-        if ad["id"] == ad_id:
-            text = f"📄 {ad['desc']}" if ad['desc'] else "Нет описания"
-
-            kb = InlineKeyboardMarkup(inline_keyboard=[
-                [InlineKeyboardButton(text="👨‍💼 Связаться", url=f"https://t.me/{ADMIN_USERNAME}")]
-            ])
-
-            await callback.message.answer(text, reply_markup=kb)
 
 # =========================
 # RUN
@@ -323,6 +304,7 @@ async def main():
 
 if __name__ == "__main__":
     asyncio.run(main())
+
 
 
 

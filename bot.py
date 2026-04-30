@@ -74,18 +74,22 @@ def clean_name(text: str) -> str:
 
 def contains_stop_word(text: str) -> bool:
     normalized = normalize_text(text)
+
     for word in STOP_WORDS:
-        if normalize_text(word) in normalized:
+        w = normalize_text(word)
+
+        # 🔥 фикс: пропускаем пустые значения
+        if not w:
+            continue
+
+        if w in normalized:
             return True
+
     return False
 
 
 def has_min_two_digits(text: str) -> bool:
     return len(re.findall(r"\d", text)) >= 2
-
-
-def is_not_only_letters(text: str) -> bool:
-    return not re.fullmatch(r"[A-Za-zА-Яа-яЁё\-\.]+", text)
 
 
 def in_db_names(text: str) -> bool:
@@ -168,17 +172,12 @@ async def choose_type(message: Message, state: FSMContext):
 async def get_name(message: Message, state: FSMContext):
     raw_name = message.text
     name = clean_name(raw_name)
-    
-    print("RAW:", raw_name)
-    print("CLEAN:", name)
-    print("DIGITS:", re.findall(r"\d", name))
-    print("COUNT:", len(re.findall(r"\d", name)))
 
     if len(name) == 0 or len(name) > 32:
         await message.answer("❌ Ошибка ввода. Повторите ввод.")
         return
 
-    # главное правило: минимум 2 цифры
+    # главное правило — минимум 2 цифры
     if not has_min_two_digits(name):
         await message.answer("❌ Ошибка ввода. Повторите ввод.")
         return

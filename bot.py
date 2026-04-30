@@ -173,7 +173,8 @@ async def get_name(message: Message, state: FSMContext):
         await message.answer("❌ Ошибка ввода. Повторите ввод.")
         return
 
-    if not has_min_two_digits(name) or not is_not_only_letters(name):
+    # главное правило: минимум 2 цифры
+    if not has_min_two_digits(name):
         await message.answer("❌ Ошибка ввода. Повторите ввод.")
         return
 
@@ -384,4 +385,3 @@ async def main():
 
 if __name__ == "__main__":
     asyncio.run(main())
-

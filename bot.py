@@ -32,6 +32,7 @@ def load_ads():
     except:
         return []
 
+
 def save_ad(ad):
     ads = load_ads()
     ads.append(ad)
@@ -39,22 +40,24 @@ def save_ad(ad):
         json.dump(ads, f, ensure_ascii=False, indent=2)
 
 # =========================
-# 🔒 СТОП-СЛОВА
+# 🔒 СТОП-СЛОВА + БАЗА
 # =========================
 
-def load_stop_words():
+def load_list(filename):
     try:
-        with open("stop_words.txt", "r", encoding="utf-8") as f:
+        with open(filename, "r", encoding="utf-8") as f:
             return [line.strip().lower() for line in f if line.strip()]
     except:
         return []
 
-STOP_WORDS = load_stop_words()
+STOP_WORDS = load_list("stop_words.txt")
+DB_NAMES = load_list("db_names.txt")
 
 CHAR_MAP = str.maketrans({
     "a": "а", "e": "е", "o": "о", "p": "р", "c": "с", "y": "у", "x": "х",
     "A": "а", "E": "е", "O": "о", "P": "р", "C": "с", "Y": "у", "X": "х"
 })
+
 
 def normalize_text(text: str) -> str:
     text = text.lower()
@@ -62,12 +65,26 @@ def normalize_text(text: str) -> str:
     text = re.sub(r"[^а-я0-9]", "", text)
     return text
 
+
 def contains_stop_word(text: str) -> bool:
     normalized = normalize_text(text)
     for word in STOP_WORDS:
         if normalize_text(word) in normalized:
             return True
     return False
+
+
+def has_min_two_digits(text: str) -> bool:
+    return len(re.findall(r"\d", text)) >= 2
+
+
+def is_not_only_letters(text: str) -> bool:
+    return not re.fullmatch(r"[A-Za-zА-Яа-яЁё\s\-]+", text)
+
+
+def in_db_names(text: str) -> bool:
+    text = text.lower()
+    return any(name in text for name in DB_NAMES)
 
 # =========================
 # 📌 FSM
@@ -146,14 +163,20 @@ async def get_name(message: Message, state: FSMContext):
     name = message.text.strip()
 
     if len(name) > 32:
-        await message.answer("❌ Максимум 32 символа\n\n🔁 Повторите ввод\n📌 Введите наименование:")
+        await message.answer("❌ Максимум 32 символа\n\n🔁 Повторите ввод")
+        return
+
+    if not has_min_two_digits(name) or not is_not_only_letters(name):
+        await message.answer("❌ Ошибка ввода. Повторите ввод.")
         return
 
     if contains_stop_word(name):
-        await message.answer("❌ Запрещённые слова\n\n🔁 Повторите ввод\n📌 Введите наименование:")
+        await message.answer("❌ Ошибка ввода. Повторите ввод.")
         return
 
-    await state.update_data(name=name)
+    status = "approved" if in_db_names(name) else "moderation"
+
+    await state.update_data(name=name, status=status)
     await message.answer("🔢 Введи количество:")
     await state.set_state(Form.quantity)
 
@@ -166,7 +189,7 @@ async def get_quantity(message: Message, state: FSMContext):
     qty = message.text.strip()
 
     if not qty.isdigit():
-        await message.answer("❌ Только цифры\n\n🔁 Повторите ввод\n🔢 Введите количество:")
+        await message.answer("❌ Только цифры\n\n🔁 Повторите ввод")
         return
 
     await state.update_data(quantity=qty)
@@ -200,16 +223,18 @@ async def get_price(message: Message, state: FSMContext):
 
     if price_input == "💰 Договорная":
         price = "договорная"
+        price_value = 0
     else:
         digits = ''.join(filter(str.isdigit, price_input))
 
         if not digits:
-            await message.answer("❌ Введи цену цифрами\n\n🔁 Повторите ввод\n💰 Введите цену:")
+            await message.answer("❌ Ошибка ввода. Повторите ввод.")
             return
 
         price = f"{digits} грн"
+        price_value = int(digits)
 
-    await state.update_data(price=price)
+    await state.update_data(price=price, price_value=price_value)
 
     await message.answer("📞 Введи номер (0501234567)")
     await state.set_state(Form.phone)
@@ -223,7 +248,7 @@ async def get_phone(message: Message, state: FSMContext):
     phone = message.text.strip()
 
     if not re.fullmatch(r"0\d{9}", phone):
-        await message.answer("❌ Неверный формат\n\n🔁 Повторите ввод\n📞 Введите номер (0501234567):")
+        await message.answer("❌ Ошибка ввода. Повторите ввод.")
         return
 
     phone = "+38" + phone
@@ -235,7 +260,6 @@ async def get_phone(message: Message, state: FSMContext):
     condition = data['condition'].replace("🆕 ", "").replace("♻️ ", "").lower()
 
     now = datetime.now().strftime("%d.%m.%Y %H:%M")
-    price_value = int(''.join(filter(str.isdigit, data['price']))) if data['price'] != "договорная" else 0
 
     text = (
         f"{title}\n\n"
@@ -253,15 +277,19 @@ async def get_phone(message: Message, state: FSMContext):
         "quantity": data['quantity'],
         "condition": condition,
         "price": data['price'],
-        "price_value": price_value,
+        "price_value": data['price_value'],
         "phone": phone,
-        "date": now
+        "date": now,
+        "status": data.get("status", "approved")
     }
 
     save_ad(ad)
 
-    await bot.send_message(CHANNEL_ID, text)
-    await message.answer("✅ Опубликовано", reply_markup=main_kb)
+    if ad["status"] == "approved":
+        await bot.send_message(CHANNEL_ID, text)
+        await message.answer("✅ Опубликовано", reply_markup=main_kb)
+    else:
+        await message.answer("⏳ Объявление отправлено на модерацию", reply_markup=main_kb)
 
     await state.clear()
 
@@ -283,6 +311,9 @@ async def search_ads(message: Message, state: FSMContext):
     results = []
 
     for ad in ads:
+        if ad.get("status") != "approved":
+            continue
+
         combined = f"{ad['name']} {ad['type']} {ad['condition']} {ad['price']}"
         combined_norm = normalize_text(combined)
 
@@ -290,7 +321,7 @@ async def search_ads(message: Message, state: FSMContext):
             results.append(ad)
 
     if not results:
-        await message.answer("❌ Ничего не найдено\n\n🔁 Попробуйте другой запрос")
+        await message.answer("❌ Ничего не найдено")
         return
 
     results = list(reversed(results))
@@ -346,3 +377,4 @@ async def main():
 
 if __name__ == "__main__":
     asyncio.run(main())
+

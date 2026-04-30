@@ -66,6 +66,12 @@ def normalize_text(text: str) -> str:
     return text
 
 
+def clean_name(text: str) -> str:
+    text = text.strip()
+    text = re.sub(r"[^A-Za-zА-Яа-яЁё0-9\-\.]+", "", text)
+    return text
+
+
 def contains_stop_word(text: str) -> bool:
     normalized = normalize_text(text)
     for word in STOP_WORDS:
@@ -79,7 +85,7 @@ def has_min_two_digits(text: str) -> bool:
 
 
 def is_not_only_letters(text: str) -> bool:
-    return not re.fullmatch(r"[A-Za-zА-Яа-яЁё\s\-]+", text)
+    return not re.fullmatch(r"[A-Za-zА-Яа-яЁё\-\.]+", text)
 
 
 def in_db_names(text: str) -> bool:
@@ -160,10 +166,11 @@ async def choose_type(message: Message, state: FSMContext):
 
 @dp.message(Form.name)
 async def get_name(message: Message, state: FSMContext):
-    name = message.text.strip()
+    raw_name = message.text
+    name = clean_name(raw_name)
 
-    if len(name) > 32:
-        await message.answer("❌ Максимум 32 символа\n\n🔁 Повторите ввод")
+    if len(name) == 0 or len(name) > 32:
+        await message.answer("❌ Ошибка ввода. Повторите ввод.")
         return
 
     if not has_min_two_digits(name) or not is_not_only_letters(name):

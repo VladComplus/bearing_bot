@@ -1,4 +1,4 @@
-# FINAL VERSION V4 (fix stop-words + correct logic SKF)
+# FINAL VERSION V5 (fixed stop-words bug completely)
 
 import asyncio
 import logging
@@ -85,13 +85,25 @@ def normalize_text(text: str) -> str:
 
 def contains_stop_word(text: str) -> bool:
     norm = normalize_text(text)
+
+    # ✅ ключевой фикс — если только цифры → пропускаем
+    if norm.isdigit():
+        return False
+
     for word in STOP_WORDS:
-        if normalize_text(word) in norm:
+        w = normalize_text(word)
+
+        # игнор коротких мусорных слов
+        if len(w) < 3:
+            continue
+
+        if w in norm:
             return True
+
     return False
 
 # =========================
-# LOGIC
+# ЛОГИКА
 # =========================
 
 def has_min_two_digits(text):
@@ -172,19 +184,16 @@ async def choose_type(message: Message, state: FSMContext):
 async def get_name(message: Message, state: FSMContext):
     name = message.text.strip()
 
-    # 1. минимум 2 цифры
     if not has_min_two_digits(name):
         await message.answer("❌ Ошибка ввод")
         return
 
-    # 2. стоп слова
     if contains_stop_word(name):
         await message.answer("❌ Ошибка ввод")
         return
 
     await state.update_data(name=name)
 
-    # 3. база (если нет → модерация)
     if not matches_db(name):
         await state.update_data(moderation=True)
     else:
@@ -304,9 +313,3 @@ async def main():
 
 if __name__ == "__main__":
     asyncio.run(main())
-
-
-
-
-
-

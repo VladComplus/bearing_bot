@@ -19,7 +19,7 @@ from aiogram.fsm.context import FSMContext
 
 TOKEN = os.getenv("BOT_TOKEN")
 CHANNEL_ID = -1003955162793
-ADMIN_ID = 123456789  # <-- ВСТАВЬ СВОЙ ID
+ADMIN_ID = 1833282667  # <-- ВСТАВЬ СВОЙ ID
 DB_FILE = "ads.json"
 
 logging.basicConfig(level=logging.INFO)

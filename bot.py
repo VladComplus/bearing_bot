@@ -1,5 +1,4 @@
-# FINAL VERSION V2 (clean architecture)
-# включает: модерацию, описание, skip, ID, архив, продление
+# FINAL VERSION V3 (fixed UX + moderation)
 
 import asyncio
 import logging
@@ -20,8 +19,9 @@ from aiogram.fsm.context import FSMContext
 
 TOKEN = os.getenv("BOT_TOKEN")
 CHANNEL_ID = -1003955162793
-ADMIN_ID = 1833282667  # вставь свой id
+ADMIN_ID = 1833282667
 DB_FILE = "ads.json"
+ADMIN_USERNAME = "blackberrySE"
 
 logging.basicConfig(level=logging.INFO)
 
@@ -144,7 +144,7 @@ async def get_name(message: Message, state: FSMContext):
     name = message.text.strip()
 
     if not has_min_two_digits(name):
-        await message.answer("❌ Ошибка ввода")
+        await message.answer("❌ Ошибка ввод")
         return
 
     await state.update_data(name=name)
@@ -229,8 +229,6 @@ async def get_desc(message: Message, state: FSMContext):
     ad_id = generate_id(ads)
 
     now = datetime.now()
-    expires = now + timedelta(days=90)
-    notify = expires - timedelta(days=5)
 
     condition = data['condition'].replace("🆕 ", "").replace("♻️ ", "").lower()
 
@@ -250,32 +248,50 @@ async def get_desc(message: Message, state: FSMContext):
 
     text += f"🕒 {now.strftime('%d.%m.%Y %H:%M')}        {ad_id}"
 
-    ad = {
-        **data,
-        "desc": desc,
-        "id": ad_id,
-        "created_at": now.strftime("%Y-%m-%d %H:%M"),
-        "expires_at": expires.strftime("%Y-%m-%d %H:%M"),
-        "notify_at": notify.strftime("%Y-%m-%d %H:%M"),
-        "status": "active",
-        "user_id": message.from_user.id
-    }
+    ad = {**data, "desc": desc, "id": ad_id}
 
     ads.append(ad)
     save_ads(ads)
 
-    kb = InlineKeyboardMarkup(inline_keyboard=[
+    # КНОПКИ МОДЕРАЦИИ
+    mod_kb = InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text="✅ Одобрить", callback_data=f"approve_{ad_id}"),
+         InlineKeyboardButton(text="❌ Отклонить", callback_data=f"reject_{ad_id}")]
+    ])
+
+    read_kb = InlineKeyboardMarkup(inline_keyboard=[
         [InlineKeyboardButton(text="📖 Читать", callback_data=f"read_{ad_id}")]
     ])
 
     if data.get("moderation"):
-        await bot.send_message(ADMIN_ID, text + "\n\n⚠️ Модерация", reply_markup=kb)
-        await message.answer("⏳ На модерации")
+        await bot.send_message(ADMIN_ID, text + "\n\n⏳ На модерации", reply_markup=mod_kb)
+        await message.answer("⏳ На модерации", reply_markup=ReplyKeyboardRemove())
     else:
-        await bot.send_message(CHANNEL_ID, text, reply_markup=kb)
-        await message.answer("✅ Опубликовано")
+        await bot.send_message(CHANNEL_ID, text, reply_markup=read_kb)
+        await message.answer("✅ Опубликовано", reply_markup=ReplyKeyboardRemove())
 
     await state.clear()
+
+# =========================
+# MODERATION ACTIONS
+# =========================
+
+@dp.callback_query(F.data.startswith("approve_"))
+async def approve(callback: CallbackQuery):
+    ad_id = callback.data.split("_")[1]
+    ads = load_ads()
+
+    for ad in ads:
+        if ad["id"] == ad_id:
+            text = f"📢 Продам\n\n📦 {ad['name']}\n🔢 Кол-во: {ad['quantity']}\n⚙️ Состояние: {ad['condition']}\n💰 Цена: {ad['price']}\n📞 {ad['phone']}\n🕒 {ad_id}"
+
+            await bot.send_message(CHANNEL_ID, text)
+
+    await callback.message.edit_text("✅ Одобрено")
+
+@dp.callback_query(F.data.startswith("reject_"))
+async def reject(callback: CallbackQuery):
+    await callback.message.edit_text("❌ Отклонено")
 
 # =========================
 # READ
@@ -288,14 +304,11 @@ async def read(callback: CallbackQuery):
 
     for ad in ads:
         if ad["id"] == ad_id:
-            if ad["status"] == "archived":
-                text = "🔒 Данные скрыты\nОбратитесь к администратору"
-                kb = InlineKeyboardMarkup(inline_keyboard=[
-                    [InlineKeyboardButton(text="👨‍💼 Связаться", url="https://t.me/blackberrySE")]
-                ])
-            else:
-                text = f"📄 {ad['desc']}"
-                kb = None
+            text = f"📄 {ad['desc']}" if ad['desc'] else "Нет описания"
+
+            kb = InlineKeyboardMarkup(inline_keyboard=[
+                [InlineKeyboardButton(text="👨‍💼 Связаться", url=f"https://t.me/{ADMIN_USERNAME}")]
+            ])
 
             await callback.message.answer(text, reply_markup=kb)
 
@@ -310,6 +323,7 @@ async def main():
 
 if __name__ == "__main__":
     asyncio.run(main())
+
 
 
 

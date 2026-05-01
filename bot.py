@@ -291,41 +291,49 @@ async def get_desc(message: Message, state: FSMContext):
     ads = load_ads()
 
     ad_id = generate_id(ads)
-
     now = datetime.now().strftime('%d.%m.%Y %H:%M')
 
     condition = data['condition'].replace("🆕 ", "").replace("♻️ ", "").lower()
 
     type_text = "📢 <b>ПРОДАМ</b>" if "Продам" in data['type'] else "💵 <b>КУПЛЮ</b>"
-
     desc_text = f"\n📖 Доп. информация: {desc}" if desc else ""
 
-text = (
-    f"{type_text}\n\n"
-    f"🧿 <b>{data['name']}</b>\n"
-    f"🔢 Кол-во: {data['quantity']}\n"
-    f"⚙️ Состояние: {condition}\n"
-    f"💰 Цена: {data['price']}\n"
-    f"📞 {data['phone']}"
-    f"{desc_text}\n\n"
-    f"🕒 {now}        {ad_id}"
-)
+    text = (
+        f"{type_text}\n\n"
+        f"🧿 <b>{data['name']}</b>\n"
+        f"🔢 Кол-во: {data['quantity']}\n"
+        f"⚙️ Состояние: {condition}\n"
+        f"💰 Цена: {data['price']}\n"
+        f"📞 {data['phone']}"
+        f"{desc_text}\n\n"
+        f"🕒 {now}        {ad_id}"
+    )
 
-ads.append({**data, "id": ad_id, "desc": desc})
-save_ads(ads)
+    ads.append({**data, "id": ad_id, "desc": desc})
+    save_ads(ads)
 
-    
     if data.get("moderation"):
         mod_kb = InlineKeyboardMarkup(inline_keyboard=[
             [InlineKeyboardButton(text="✅ Одобрить", callback_data=f"approve_{ad_id}"),
              InlineKeyboardButton(text="❌ Отклонить", callback_data=f"reject_{ad_id}")]
         ])
 
-        await bot.send_message(ADMIN_ID, text + "\n\n⏳ На модерации", reply_markup=mod_kb, parse_mode="HTML")
+        await bot.send_message(
+            ADMIN_ID,
+            text + "\n\n⏳ На модерации",
+            reply_markup=mod_kb,
+            parse_mode="HTML"
+        )
+
         await message.answer("⏳ На модерации", reply_markup=main_kb)
     else:
-        await bot.send_message(CHANNEL_ID, text, parse_mode="HTML")
-        await message.answer("✅ Опубликовано\n\nВыберите действие:", reply_markup=main_kb)
+        await bot.send_message(
+            CHANNEL_ID,
+            text,
+            parse_mode="HTML"
+        )
+
+        await message.answer("✅ Опубликовано", reply_markup=main_kb)
 
     await state.clear()
 

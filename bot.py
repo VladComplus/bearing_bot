@@ -5,7 +5,7 @@ import logging
 import os
 import re
 import json
-from datetime import datetime
+from datetime import datetime, timedelta
 from zoneinfo import ZoneInfo
 
 from aiogram import Bot, Dispatcher, F
@@ -323,14 +323,22 @@ async def get_desc(message: Message, state: FSMContext):
         f"🕒 {now}        {ad_id}"
     )
 
-    ads.append({
+    now_dt = datetime.now(ZoneInfo("Europe/Kyiv"))
+
+ads.append({
     **data,
     "id": ad_id,
     "desc": desc,
+
     "user_id": message.from_user.id,
     "username": message.from_user.username,
     "first_name": message.from_user.first_name,
-    "last_name": message.from_user.last_name
+    "last_name": message.from_user.last_name,
+
+    "created_at": now_dt.isoformat(),
+    "expires_at": (now_dt + timedelta(days=90)).isoformat(),
+    "archived": False,
+    "notified_85": False
     })
     
     save_ads(ads)

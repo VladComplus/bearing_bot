@@ -323,7 +323,16 @@ async def get_desc(message: Message, state: FSMContext):
         f"🕒 {now}        {ad_id}"
     )
 
-    ads.append({**data, "id": ad_id, "desc": desc})
+    ads.append({
+    **data,
+    "id": ad_id,
+    "desc": desc,
+    "user_id": message.from_user.id,
+    "username": message.from_user.username,
+    "first_name": message.from_user.first_name,
+    "last_name": message.from_user.last_name
+    })
+    
     save_ads(ads)
 
     if data.get("moderation"):

@@ -162,13 +162,17 @@ class Form(StatesGroup):
     price = State()
     phone = State()
     desc = State()
+    search = State()
 
 # =========================
 # UI
 # =========================
 
 main_kb = ReplyKeyboardMarkup(
-    keyboard=[[KeyboardButton(text="📢 Продам")],[KeyboardButton(text="💵 Куплю")]],
+    keyboard=[
+        [KeyboardButton(text="📢 Продам"), KeyboardButton(text="💵 Куплю")],
+        [KeyboardButton(text="🔍 Поиск")]
+    ],
     resize_keyboard=True
 )
 
@@ -205,6 +209,11 @@ async def choose_type(message: Message, state: FSMContext):
     await state.update_data(type=message.text)
     await message.answer("Введите наименование:")
     await state.set_state(Form.name)
+    
+@dp.message(F.text == "🔍 Поиск")
+async def search_start(message: Message, state: FSMContext):
+    await state.set_state(Form.search)
+    await message.answer("Введите номер подшипника или текст для поиска:")
 
 @dp.message(Form.name)
 async def get_name(message: Message, state: FSMContext):
@@ -340,6 +349,51 @@ async def get_desc(message: Message, state: FSMContext):
 
         await message.answer("✅ Опубликовано", reply_markup=main_kb)
 
+    await state.clear()
+@dp.message(Form.search)
+async def search_ads(message: Message, state: FSMContext):
+    query = message.text.strip().lower()
+
+    ads = load_ads()
+
+    results = []
+
+    for ad in ads:
+        text = (
+            ad.get("name", "") + " " +
+            ad.get("desc", "")
+        ).lower()
+
+        if query in text:
+            results.append(ad)
+
+    if not results:
+        await message.answer("❌ Ничего не найдено", reply_markup=main_kb)
+        await state.clear()
+        return
+
+    for ad in results[:5]:
+        condition = ad['condition'].replace("🆕 ", "").replace("♻️ ", "").lower()
+
+        type_text = "📢 <b>ПРОДАМ</b>" if "Продам" in ad['type'] else "💵 <b>КУПЛЮ</b>"
+        desc_text = f"\n📖 Доп. информация: {ad['desc']}" if ad.get("desc") else ""
+
+        now = datetime.now(ZoneInfo("Europe/Kyiv")).strftime('%d.%m.%Y %H:%M')
+
+        text = (
+            f"{type_text}\n\n"
+            f"🧿 <b>{ad['name']}</b>\n"
+            f"🔢 Кол-во: {ad['quantity']}\n"
+            f"⚙️ Состояние: {condition}\n"
+            f"💰 Цена: {ad['price']}\n"
+            f"📞 {ad['phone']}"
+            f"{desc_text}\n\n"
+            f"🕒 {now}        {ad['id']}"
+        )
+
+        await message.answer(text, parse_mode="HTML")
+
+    await message.answer(f"🔎 Найдено: {len(results)}", reply_markup=main_kb)
     await state.clear()
 
 # =========================

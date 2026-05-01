@@ -398,26 +398,26 @@ async def get_desc(message: Message, state: FSMContext):
     )
     
     if data.get("moderation"):
-        mod_kb = InlineKeyboardMarkup(inline_keyboard=[
-            [InlineKeyboardButton(text="✅ Одобрить", callback_data=f"approve_{ad_id}"),
-             InlineKeyboardButton(text="❌ Отклонить", callback_data=f"reject_{ad_id}")]
-        ])
+    mod_kb = InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text="✅ Одобрить", callback_data=f"approve_{ad_id}"),
+         InlineKeyboardButton(text="❌ Отклонить", callback_data=f"reject_{ad_id}")]
+    ])
 
     await bot.send_message(
         ADMIN_ID,
         text + "\n\n⏳ На модерации",
         reply_markup=mod_kb,
         parse_mode="HTML"
-        )
+    )
 
     await message.answer("⏳ На модерации", reply_markup=main_kb)
-    
-    else:
+
+else:
     await bot.send_message(
         CHANNEL_ID,
         text,
         parse_mode="HTML"
-        )
+    )
 
     await message.answer("✅ Опубликовано", reply_markup=main_kb)
 

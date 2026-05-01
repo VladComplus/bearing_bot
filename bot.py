@@ -337,7 +337,7 @@ async def get_desc(message: Message, state: FSMContext):
     
     ad_id = generate_id()
 
-    now = datetime.fromisoformat(created_at).strftime('%d.%m.%Y %H:%M')
+    now = datetime.now(ZoneInfo("Europe/Kyiv")).strftime('%d.%m.%Y %H:%M')
     now_dt = datetime.now(ZoneInfo("Europe/Kyiv"))
 
     condition = data['condition'].replace("🆕 ", "").replace("♻️ ", "").lower()

@@ -298,7 +298,7 @@ async def get_desc(message: Message, state: FSMContext):
 
     type_text = "📢 <b>ПРОДАМ</b>" if "Продам" in data['type'] else "💵 <b>КУПЛЮ</b>"
 
-desc_text = f"\n📖 Доп. информация: {desc}" if desc else ""
+    desc_text = f"\n📖 Доп. информация: {desc}" if desc else ""
 
 text = (
     f"{type_text}\n\n"

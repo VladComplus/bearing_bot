@@ -286,6 +286,10 @@ async def get_desc(message: Message, state: FSMContext):
     if desc and len(desc) > 250:
         await message.answer("❌ Слишком длинный текст")
         return
+        
+    if desc and contains_stop_word(desc):
+        await message.answer("❌ Ошибка ввод")
+        return
 
     data = await state.get_data()
     ads = load_ads()

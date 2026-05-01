@@ -246,6 +246,75 @@ async def choose_type(message: Message, state: FSMContext):
 async def search_start(message: Message, state: FSMContext):
     await state.set_state(Form.search)
     await message.answer("Введите номер подшипника или текст для поиска:")
+    
+@dp.message(Form.search)
+async def search_ads(message: Message, state: FSMContext):
+    query = message.text.strip().lower()
+
+    conn = sqlite3.connect("ads.db")
+    cursor = conn.cursor()
+
+    cursor.execute("""
+    SELECT id, type, name, quantity, condition, price, phone, desc, created_at, archived
+    FROM ads
+    WHERE lower(name) LIKE ?
+    ORDER BY created_at DESC
+    LIMIT 10
+    """, (f"%{query}%",))
+
+    rows = cursor.fetchall()
+    conn.close()
+
+    if not rows:
+        await message.answer("❌ Ничего не найдено")
+        return
+
+    for row in rows:
+        ad_id = row[0]
+        type_text = "📢 <b>ПРОДАМ</b>" if "Продам" in row[1] else "💵 <b>КУПЛЮ</b>"
+        condition = row[4].replace("🆕 ", "").replace("♻️ ", "").lower()
+        now = datetime.fromisoformat(row[8]).strftime('%d.%m.%Y %H:%M')
+
+        is_archived = row[9] == 1
+
+        if is_archived:
+            text = (
+                f"{type_text}\n\n"
+                f"🧿 <b>{row[2]}</b>\n"
+                f"🔢 Кол-во: {row[3]}\n"
+                f"⚙️ Состояние: {condition}\n"
+                f"💰 Цена: {row[5]}\n\n"
+                f"🔒 Архивное объявление\n"
+                f"📩 Связь через администратора\n\n"
+                f"🕒 {now}        {ad_id}"
+            )
+
+            kb = InlineKeyboardMarkup(inline_keyboard=[
+                [InlineKeyboardButton(
+                    text="📩 Связаться с админом",
+                    url=f"https://t.me/{ADMIN_USERNAME}"
+                )]
+            ])
+
+            await message.answer(text, reply_markup=kb, parse_mode="HTML")
+
+        else:
+            desc_text = f"\n📖 Доп. информация: {row[7]}" if row[7] else ""
+
+            text = (
+                f"{type_text}\n\n"
+                f"🧿 <b>{row[2]}</b>\n"
+                f"🔢 Кол-во: {row[3]}\n"
+                f"⚙️ Состояние: {condition}\n"
+                f"💰 Цена: {row[5]}\n"
+                f"📞 {row[6]}"
+                f"{desc_text}\n\n"
+                f"🕒 {now}        {ad_id}"
+            )
+
+            await message.answer(text, parse_mode="HTML")
+
+    await state.clear()
 
 @dp.message(Form.name)
 async def get_name(message: Message, state: FSMContext):

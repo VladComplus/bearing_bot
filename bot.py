@@ -6,6 +6,7 @@ import os
 import re
 import json
 from datetime import datetime
+from zoneinfo import ZoneInfo
 
 from aiogram import Bot, Dispatcher, F
 from aiogram.types import (
@@ -295,7 +296,7 @@ async def get_desc(message: Message, state: FSMContext):
     ads = load_ads()
 
     ad_id = generate_id(ads)
-    now = datetime.now().strftime('%d.%m.%Y %H:%M')
+    now = datetime.now(ZoneInfo("Europe/Kyiv")).strftime('%d.%m.%Y %H:%M')
 
     condition = data['condition'].replace("🆕 ", "").replace("♻️ ", "").lower()
 

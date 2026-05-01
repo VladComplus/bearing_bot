@@ -320,7 +320,7 @@ async def get_phone(message: Message, state: FSMContext):
 
 @dp.message(Form.desc)
 async def get_desc(message: Message, state: FSMContext):
-    if message.text == "⏭ Пропустить":
+        if message.text == "⏭ Пропустить":
         desc = ""
     else:
         desc = message.text.strip()
@@ -334,11 +334,11 @@ async def get_desc(message: Message, state: FSMContext):
         return
 
     data = await state.get_data()
-    
+
     ad_id = generate_id()
 
-    now = datetime.now(ZoneInfo("Europe/Kyiv")).strftime('%d.%m.%Y %H:%M')
     now_dt = datetime.now(ZoneInfo("Europe/Kyiv"))
+    now = now_dt.strftime('%d.%m.%Y %H:%M')
 
     condition = data['condition'].replace("🆕 ", "").replace("♻️ ", "").lower()
 
@@ -346,16 +346,16 @@ async def get_desc(message: Message, state: FSMContext):
     desc_text = f"\n📖 Доп. информация: {desc}" if desc else ""
 
     text = (
-    f"{type_text}\n\n"
-    f"🧿 <b>{data['name']}</b>\n"
-    f"🔢 Кол-во: {data['quantity']}\n"
-    f"⚙️ Состояние: {condition}\n"
-    f"💰 Цена: {data['price']}\n"
-    f"📞 {data['phone']}"
-    f"{desc_text}\n\n"
-    f"🕒 {now}        {ad_id}"
+        f"{type_text}\n\n"
+        f"🧿 <b>{data['name']}</b>\n"
+        f"🔢 Кол-во: {data['quantity']}\n"
+        f"⚙️ Состояние: {condition}\n"
+        f"💰 Цена: {data['price']}\n"
+        f"📞 {data['phone']}"
+        f"{desc_text}\n\n"
+        f"🕒 {now}        {ad_id}"
     )
-  
+
     conn = sqlite3.connect("ads.db")
     cursor = conn.cursor()
 
@@ -366,60 +366,45 @@ async def get_desc(message: Message, state: FSMContext):
     )    
     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0)
     """, (
-    ad_id,
-    data['type'],
-    data['name'],
-    data['quantity'],
-    data['condition'],
-    data['price'],
-    data['phone'],
-    desc,
-    message.from_user.id,
-    now_dt.isoformat(),
-    (now_dt + timedelta(days=90)).isoformat()
-))
+        ad_id,
+        data['type'],
+        data['name'],
+        data['quantity'],
+        data['condition'],
+        data['price'],
+        data['phone'],
+        desc,
+        message.from_user.id,
+        now_dt.isoformat(),
+        (now_dt + timedelta(days=90)).isoformat()
+    ))
 
     conn.commit()
     conn.close()
 
-
-    type_text = "📢 <b>ПРОДАМ</b>" if "Продам" in data['type'] else "💵 <b>КУПЛЮ</b>"
-    desc_text = f"\n📖 Доп. информация: {desc}" if desc else ""
-
-    text = (
-    f"{type_text}\n\n"
-    f"🧿 <b>{data['name']}</b>\n"
-    f"🔢 Кол-во: {data['quantity']}\n"
-    f"⚙️ Состояние: {condition}\n"
-    f"💰 Цена: {data['price']}\n"
-    f"📞 {data['phone']}"
-    f"{desc_text}\n\n"
-    f"🕒 {now}        {ad_id}"
-    )
-    
     if data.get("moderation"):
         mod_kb = InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text="✅ Одобрить", callback_data=f"approve_{ad_id}"),
-         InlineKeyboardButton(text="❌ Отклонить", callback_data=f"reject_{ad_id}")]
-    ])
+            [InlineKeyboardButton(text="✅ Одобрить", callback_data=f"approve_{ad_id}"),
+             InlineKeyboardButton(text="❌ Отклонить", callback_data=f"reject_{ad_id}")]
+        ])
 
-    await bot.send_message(
-        ADMIN_ID,
-        text + "\n\n⏳ На модерации",
-        reply_markup=mod_kb,
-        parse_mode="HTML"
-    )
+        await bot.send_message(
+            ADMIN_ID,
+            text + "\n\n⏳ На модерации",
+            reply_markup=mod_kb,
+            parse_mode="HTML"
+        )
 
-    await message.answer("⏳ На модерации", reply_markup=main_kb)
+        await message.answer("⏳ На модерации", reply_markup=main_kb)
 
     else:
-    await bot.send_message(
-        CHANNEL_ID,
-        text,
-        parse_mode="HTML"
-    )
+        await bot.send_message(
+            CHANNEL_ID,
+            text,
+            parse_mode="HTML"
+        )
 
-    await message.answer("✅ Опубликовано", reply_markup=main_kb)
+        await message.answer("✅ Опубликовано", reply_markup=main_kb)
 
     await state.clear()
 

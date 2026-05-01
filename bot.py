@@ -328,6 +328,30 @@ async def get_desc(message: Message, state: FSMContext):
     await state.clear()
 
 # =========================
+# READ FULL DESCRIPTION
+# =========================
+
+@dp.callback_query(F.data.startswith("read_"))
+async def read_more(callback: CallbackQuery):
+    ad_id = callback.data.split("_", 1)[1]
+
+    ads = load_ads()
+    ad = next((a for a in ads if a.get("id") == ad_id), None)
+
+    if not ad:
+        await callback.answer("❌ Объявление не найдено", show_alert=True)
+        return
+
+    desc = ad.get("desc", "")
+
+    if not desc:
+        await callback.answer("ℹ️ Нет дополнительной информации", show_alert=True)
+        return
+
+    await callback.message.answer(f"📖 Доп. информация:\n\n{desc}")
+    await callback.answer()
+
+# =========================
 # RUN
 # =========================
 

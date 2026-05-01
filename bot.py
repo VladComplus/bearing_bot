@@ -435,26 +435,12 @@ WHERE id = ?
     conn.close()
 
     if not row:
-    await callback.answer("❌ Не найдено", show_alert=True)
-    return
+        await callback.answer("❌ Не найдено", show_alert=True)
+        return
 
     condition = row[3].replace("🆕 ", "").replace("♻️ ", "").lower()
 
-    type_text = "📢 <b>ПРОДАМ</b>" if "Продам" in row[0] else "💵 <b>КУПЛЮ</b>"
-    desc_text = f"\n📖 Доп. информация: {row[6]}" if row[6] else ""
-
-    now = datetime.now().strftime('%d.%м.%Y %H:%M')
-
-    text = (
-    f"{type_text}\n\n"
-    f"🧿 <b>{row[1]}</b>\n"
-    f"🔢 Кол-во: {row[2]}\n"
-    f"⚙️ Состояние: {condition}\n"
-    f"💰 Цена: {row[4]}\n"
-    f"📞 {row[5]}"
-    f"{desc_text}\n\n"
-    f"🕒 {now}        {ad_id}"
-)
+    
     
 
     

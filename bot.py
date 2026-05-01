@@ -311,8 +311,8 @@ text = (
     f"🕒 {now}        {ad_id}"
 )
 
-    ads.append({**data, "id": ad_id, "desc": desc})
-    save_ads(ads)
+ads.append({**data, "id": ad_id, "desc": desc})
+save_ads(ads)
 
     read_kb = InlineKeyboardMarkup(inline_keyboard=[
         [InlineKeyboardButton(text="📖 Читать", callback_data=f"read_{ad_id}")]

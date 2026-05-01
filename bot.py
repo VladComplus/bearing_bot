@@ -323,7 +323,7 @@ async def get_desc(message: Message, state: FSMContext):
         await message.answer("⏳ На модерации", reply_markup=main_kb)
     else:
         await bot.send_message(CHANNEL_ID, text, reply_markup=read_kb)
-        await message.answer("✅ Опубликовано", reply_markup=main_kb)
+        await message.answer("✅ Опубликовано\n\nВыберите действие:", reply_markup=main_kb)
 
     await state.clear()
 

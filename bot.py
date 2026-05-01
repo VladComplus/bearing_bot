@@ -419,7 +419,7 @@ async def get_desc(message: Message, state: FSMContext):
         parse_mode="HTML"
         )
 
-        await message.answer("✅ Опубликовано", reply_markup=main_kb)
+    await message.answer("✅ Опубликовано", reply_markup=main_kb)
 
     await state.clear()
 

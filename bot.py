@@ -4,7 +4,7 @@ import asyncio
 import logging
 import os
 import re
-import json
+import sqlite3
 from datetime import datetime, timedelta
 from zoneinfo import ZoneInfo
 
@@ -22,7 +22,7 @@ TOKEN = os.getenv("BOT_TOKEN")
 CHANNEL_ID = -1003955162793
 ADMIN_ID = 1833282667
 ADMIN_USERNAME = "blackberrySE"
-DB_FILE = "ads.json"
+
 
 logging.basicConfig(level=logging.INFO)
 
@@ -33,17 +33,29 @@ dp = Dispatcher()
 # БАЗА
 # =========================
 
-def load_ads():
-    try:
-        with open(DB_FILE, "r", encoding="utf-8") as f:
-            return json.load(f)
-    except:
-        return []
+def init_db():
+    conn = sqlite3.connect("ads.db")
+    cursor = conn.cursor()
 
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS ads (
+        id TEXT PRIMARY KEY,
+        type TEXT,
+        name TEXT,
+        quantity TEXT,
+        condition TEXT,
+        price TEXT,
+        phone TEXT,
+        desc TEXT,
+        user_id INTEGER,
+        created_at TEXT,
+        expires_at TEXT,
+        archived INTEGER DEFAULT 0
+    )
+    """)
 
-def save_ads(ads):
-    with open(DB_FILE, "w", encoding="utf-8") as f:
-        json.dump(ads, f, ensure_ascii=False, indent=2)
+    conn.commit()
+    conn.close()
 
 # =========================
 # DB NAMES
@@ -145,10 +157,18 @@ def matches_db(name):
     return False
 
 
-def generate_id(ads):
+def generate_id():
     today = datetime.now().strftime("%Y%m%d")
-    today_ads = [a for a in ads if a.get("id", "").startswith(f"ID{today}")]
-    return f"ID{today}-{len(today_ads)+1}"
+
+    conn = sqlite3.connect("ads.db")
+    cursor = conn.cursor()
+
+    cursor.execute("SELECT COUNT(*) FROM ads WHERE id LIKE ?", (f"ID{today}-%",))
+    count = cursor.fetchone()[0]
+
+    conn.close()
+
+    return f"ID{today}-{count+1}"
 
 # =========================
 # FSM
@@ -302,9 +322,8 @@ async def get_desc(message: Message, state: FSMContext):
         return
 
     data = await state.get_data()
-    ads = load_ads()
-
-    ad_id = generate_id(ads)
+    
+    ad_id = generate_id()
 
     now = datetime.now(ZoneInfo("Europe/Kyiv")).strftime('%d.%m.%Y %H:%M')
     now_dt = datetime.now(ZoneInfo("Europe/Kyiv"))
@@ -324,25 +343,33 @@ async def get_desc(message: Message, state: FSMContext):
         f"{desc_text}\n\n"
         f"🕒 {now}        {ad_id}"
     )
+  
+    conn = sqlite3.connect("ads.db")
+    cursor = conn.cursor()
 
-    ads.append({
-        **data,
-        "id": ad_id,
-        "desc": desc,
+    cursor.execute("""
+    INSERT INTO ads (
+    id, type, name, quantity, condition, price,
+    phone, desc, user_id, created_at, expires_at, archived
+    )    
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0)
+    """, (
+    ad_id,
+    data['type'],
+    data['name'],
+    data['quantity'],
+    data['condition'],
+    data['price'],
+    data['phone'],
+    desc,
+    message.from_user.id,
+    now_dt.isoformat(),
+    (now_dt + timedelta(days=90)).isoformat()
+))
 
-        "user_id": message.from_user.id,
-        "username": message.from_user.username,
-        "first_name": message.from_user.first_name,
-        "last_name": message.from_user.last_name,
-
-        "created_at": now_dt.isoformat(),
-        "expires_at": (now_dt + timedelta(days=90)).isoformat(),
-        "archived": False,
-        "notified_85": False
-    })
-
-    save_ads(ads)
-
+    conn.commit()
+    conn.close()
+    
     if data.get("moderation"):
         mod_kb = InlineKeyboardMarkup(inline_keyboard=[
             [InlineKeyboardButton(text="✅ Одобрить", callback_data=f"approve_{ad_id}"),
@@ -376,14 +403,9 @@ async def get_desc(message: Message, state: FSMContext):
 async def read_more(callback: CallbackQuery):
     ad_id = callback.data.split("_", 1)[1]
 
-    ads = load_ads()
-    ad = next((a for a in ads if a.get("id") == ad_id), None)
+   
 
-    if not ad:
-        await callback.answer("❌ Объявление не найдено", show_alert=True)
-        return
-
-    desc = ad.get("desc", "")
+    desc = "временно недоступно"
 
     if not desc:
         await callback.answer("ℹ️ Нет дополнительной информации", show_alert=True)
@@ -400,12 +422,8 @@ async def read_more(callback: CallbackQuery):
 async def approve_ad(callback: CallbackQuery):
     ad_id = callback.data.split("_", 1)[1]
 
-    ads = load_ads()
-    ad = next((a for a in ads if a.get("id") == ad_id), None)
-
-    if not ad:
-        await callback.answer("❌ Не найдено", show_alert=True)
-        return
+    
+    
 
     condition = ad['condition'].replace("🆕 ", "").replace("♻️ ", "").lower()
     now = datetime.now().strftime('%d.%m.%Y %H:%M')
@@ -443,6 +461,7 @@ async def reject_ad(callback: CallbackQuery):
 
 async def main():
     print("БОТ СТАРТОВАЛ")
+    init_db()
     await bot.delete_webhook(drop_pending_updates=True)
     await dp.start_polling(bot)
 

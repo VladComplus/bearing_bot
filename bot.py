@@ -398,6 +398,7 @@ async def get_desc(message: Message, state: FSMContext):
     )
     
     if data.get("moderation"):
+        
     mod_kb = InlineKeyboardMarkup(inline_keyboard=[
         [InlineKeyboardButton(text="✅ Одобрить", callback_data=f"approve_{ad_id}"),
          InlineKeyboardButton(text="❌ Отклонить", callback_data=f"reject_{ad_id}")]

@@ -220,6 +220,18 @@ async def start(message: Message, state: FSMContext):
     await state.clear()
     await message.answer("Выбери действие:", reply_markup=main_kb)
 
+@dp.message(Command("testdb"))
+async def test_db(message: Message):
+    conn = sqlite3.connect("ads.db")
+    cursor = conn.cursor()
+
+    cursor.execute("SELECT COUNT(*) FROM ads")
+    count = cursor.fetchone()[0]
+
+    conn.close()
+
+    await message.answer(f"В базе объявлений: {count}")
+
 # =========================
 # FLOW
 # =========================

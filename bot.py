@@ -58,7 +58,7 @@ def load_db_names():
 DB_NAMES = load_db_names()
 
 # =========================
-# STOP WORDS
+# STOP WORDS (V6 HARD FILTER)
 # =========================
 
 def load_stop_words():
@@ -79,25 +79,50 @@ CHAR_MAP = str.maketrans({
 def normalize_text(text: str) -> str:
     text = text.lower()
     text = text.translate(CHAR_MAP)
-    text = re.sub(r"[^а-я0-9]", "", text)
+
+    # заменяем похожие символы
+    text = text.replace("0", "o").replace("1", "l").replace("3", "e")
+
+    # оставляем латиницу + кириллицу + цифры
+    text = re.sub(r"[^a-zа-я0-9]", "", text)
+
     return text
+
+
+def build_pattern(word: str) -> str:
+    """
+    Превращает слово в regex, который ловит:
+    f.u.c.k / f u c k / f-uck / f*ck
+    """
+    chars = list(word)
+    pattern = r""
+
+    for c in chars:
+        pattern += re.escape(c) + r"[\W_]*"
+
+    return pattern
+
+
+# строим regex один раз
+STOP_PATTERNS = []
+
+for word in STOP_WORDS:
+    w = normalize_text(word)
+
+    if len(w) < 2:
+        continue
+
+    STOP_PATTERNS.append(re.compile(build_pattern(w)))
 
 
 def contains_stop_word(text: str) -> bool:
     norm = normalize_text(text)
 
-    # ✅ ключевой фикс — если только цифры → пропускаем
     if norm.isdigit():
         return False
 
-    for word in STOP_WORDS:
-        w = normalize_text(word)
-
-        # игнор коротких мусорных слов
-        if len(w) < 3:
-            continue
-
-        if w in norm:
+    for pattern in STOP_PATTERNS:
+        if pattern.search(norm):
             return True
 
     return False

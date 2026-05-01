@@ -320,10 +320,10 @@ async def get_desc(message: Message, state: FSMContext):
         ])
 
         await bot.send_message(ADMIN_ID, text + "\n\n⏳ На модерации", reply_markup=mod_kb)
-        await message.answer("⏳ На модерации", reply_markup=ReplyKeyboardRemove())
+        await message.answer("⏳ На модерации", reply_markup=main_kb)
     else:
         await bot.send_message(CHANNEL_ID, text, reply_markup=read_kb)
-        await message.answer("✅ Опубликовано", reply_markup=ReplyKeyboardRemove())
+        await message.answer("✅ Опубликовано", reply_markup=main_kb)
 
     await state.clear()
 

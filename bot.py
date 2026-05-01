@@ -342,19 +342,7 @@ async def get_desc(message: Message, state: FSMContext):
 
     condition = data['condition'].replace("🆕 ", "").replace("♻️ ", "").lower()
 
-    type_text = "📢 <b>ПРОДАМ</b>" if "Продам" in data['type'] else "💵 <b>КУПЛЮ</b>"
-    desc_text = f"\n📖 Доп. информация: {desc}" if desc else ""
-
-    text = (
-        f"{type_text}\n\n"
-        f"🧿 <b>{data['name']}</b>\n"
-        f"🔢 Кол-во: {data['quantity']}\n"
-        f"⚙️ Состояние: {condition}\n"
-        f"💰 Цена: {data['price']}\n"
-        f"📞 {data['phone']}"
-        f"{desc_text}\n\n"
-        f"🕒 {now}        {ad_id}"
-    )
+    
   
     conn = sqlite3.connect("ads.db")
     cursor = conn.cursor()

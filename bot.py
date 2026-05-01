@@ -491,7 +491,24 @@ async def reject_ad(callback: CallbackQuery):
 # =========================
 # RUN
 # =========================
+async def archive_old_ads():
+    while True:
+        conn = sqlite3.connect("ads.db")
+        cursor = conn.cursor()
 
+        now = datetime.now(ZoneInfo("Europe/Kyiv")).isoformat()
+
+        cursor.execute("""
+        UPDATE ads
+        SET archived = 1
+        WHERE expires_at < ? AND archived = 0
+        """, (now,))
+
+        conn.commit()
+        conn.close()
+
+        await asyncio.sleep(3600)
+        
 async def main():
     print("БОТ СТАРТОВАЛ")
     init_db()

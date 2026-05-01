@@ -337,7 +337,7 @@ async def get_desc(message: Message, state: FSMContext):
     
     ad_id = generate_id()
 
-    now = datetime.now(ZoneInfo("Europe/Kyiv")).strftime('%d.%m.%Y %H:%M')
+    now = datetime.fromisoformat(created_at).strftime('%d.%m.%Y %H:%M')
     now_dt = datetime.now(ZoneInfo("Europe/Kyiv"))
 
     condition = data['condition'].replace("🆕 ", "").replace("♻️ ", "").lower()
@@ -426,7 +426,7 @@ async def approve_ad(callback: CallbackQuery):
     cursor = conn.cursor()
 
     cursor.execute("""
-SELECT type, name, quantity, condition, price, phone, desc
+SELECT type, name, quantity, condition, price, phone, desc, created_at
 FROM ads
 WHERE id = ?
 """, (ad_id,))
@@ -445,18 +445,20 @@ WHERE id = ?
 
     
 
-    type_text = "📢 <b>ПРОДАМ</b>" if "Продам" in ad['type'] else "💵 <b>КУПЛЮ</b>"
-    desc_text = f"\n📖 Доп. информация: {ad['desc']}" if ad.get("desc") else ""
+    type_text = "📢 <b>ПРОДАМ</b>" if "Продам" in row[0] else "💵 <b>КУПЛЮ</b>"
+    desc_text = f"\n📖 Доп. информация: {row[6]}" if row[6] else ""
+
+    now = datetime.fromisoformat(row[7]).strftime('%d.%m.%Y %H:%M')
 
     text = (
-        f"{type_text}\n\n"
-        f"🧿 <b>{ad['name']}</b>\n"
-        f"🔢 Кол-во: {ad['quantity']}\n"
-        f"⚙️ Состояние: {condition}\n"
-        f"💰 Цена: {ad['price']}\n"
-        f"📞 {ad['phone']}"
-        f"{desc_text}\n\n"
-        f"🕒 {now}        {ad_id}"
+    f"{type_text}\n\n"
+    f"🧿 <b>{row[1]}</b>\n"
+    f"🔢 Кол-во: {row[2]}\n"
+    f"⚙️ Состояние: {condition}\n"
+    f"💰 Цена: {row[4]}\n"
+    f"📞 {row[5]}"
+    f"{desc_text}\n\n"
+    f"🕒 {now}        {ad_id}"
     )
 
     await bot.send_message(CHANNEL_ID, text, parse_mode="HTML")

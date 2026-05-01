@@ -318,10 +318,11 @@ async def get_phone(message: Message, state: FSMContext):
     await message.answer("Доп. информация (до 250 символов):", reply_markup=skip_kb)
     await state.set_state(Form.desc)
 
+
 @dp.message(Form.desc)
 async def get_desc(message: Message, state: FSMContext):
-        if message.text == "⏭ Пропустить":
-            desc = ""
+    if message.text == "⏭ Пропустить":
+        desc = ""
     else:
         desc = message.text.strip()
 
@@ -361,8 +362,8 @@ async def get_desc(message: Message, state: FSMContext):
 
     cursor.execute("""
     INSERT INTO ads (
-    id, type, name, quantity, condition, price,
-    phone, desc, user_id, created_at, expires_at, archived
+        id, type, name, quantity, condition, price,
+        phone, desc, user_id, created_at, expires_at, archived
     )    
     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0)
     """, (

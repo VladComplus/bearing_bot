@@ -366,6 +366,51 @@ async def read_more(callback: CallbackQuery):
     await callback.answer()
 
 # =========================
+# MODERATION HANDLERS
+# =========================
+
+@dp.callback_query(F.data.startswith("approve_"))
+async def approve_ad(callback: CallbackQuery):
+    ad_id = callback.data.split("_", 1)[1]
+
+    ads = load_ads()
+    ad = next((a for a in ads if a.get("id") == ad_id), None)
+
+    if not ad:
+        await callback.answer("❌ Не найдено", show_alert=True)
+        return
+
+    condition = ad['condition'].replace("🆕 ", "").replace("♻️ ", "").lower()
+    now = datetime.now().strftime('%d.%m.%Y %H:%M')
+
+    type_text = "📢 <b>ПРОДАМ</b>" if "Продам" in ad['type'] else "💵 <b>КУПЛЮ</b>"
+    desc_text = f"\n📖 Доп. информация: {ad['desc']}" if ad.get("desc") else ""
+
+    text = (
+        f"{type_text}\n\n"
+        f"🧿 <b>{ad['name']}</b>\n"
+        f"🔢 Кол-во: {ad['quantity']}\n"
+        f"⚙️ Состояние: {condition}\n"
+        f"💰 Цена: {ad['price']}\n"
+        f"📞 {ad['phone']}"
+        f"{desc_text}\n\n"
+        f"🕒 {now}        {ad_id}"
+    )
+
+    await bot.send_message(CHANNEL_ID, text, parse_mode="HTML")
+
+    await callback.message.edit_text("✅ Одобрено")
+    await callback.answer()
+
+
+@dp.callback_query(F.data.startswith("reject_"))
+async def reject_ad(callback: CallbackQuery):
+    ad_id = callback.data.split("_", 1)[1]
+
+    await callback.message.edit_text("❌ Отклонено")
+    await callback.answer()
+
+# =========================
 # RUN
 # =========================
 

@@ -440,7 +440,7 @@ async def approve_ad(callback: CallbackQuery):
     cursor = conn.cursor()
 
     cursor.execute("""
-SELECT type, name, quantity, condition, price, phone, desc, created_at
+SELECT type, name, quantity, condition, price, phone, desc, created_at, archived
 FROM ads
 WHERE id = ?
 """, (ad_id,))
@@ -452,30 +452,46 @@ WHERE id = ?
         await callback.answer("❌ Не найдено", show_alert=True)
         return
 
+    is_archived = row[8] == 1
+
     condition = row[3].replace("🆕 ", "").replace("♻️ ", "").lower()
-
-    
-    
-
-    
 
     type_text = "📢 <b>ПРОДАМ</b>" if "Продам" in row[0] else "💵 <b>КУПЛЮ</b>"
     desc_text = f"\n📖 Доп. информация: {row[6]}" if row[6] else ""
 
     now = datetime.fromisoformat(row[7]).strftime('%d.%m.%Y %H:%M')
 
-    text = (
-    f"{type_text}\n\n"
-    f"🧿 <b>{row[1]}</b>\n"
-    f"🔢 Кол-во: {row[2]}\n"
-    f"⚙️ Состояние: {condition}\n"
-    f"💰 Цена: {row[4]}\n"
-    f"📞 {row[5]}"
-    f"{desc_text}\n\n"
-    f"🕒 {now}        {ad_id}"
-    )
+    if is_archived:
+        text = (
+            f"{type_text}\n\n"
+            f"🧿 <b>{row[1]}</b>\n"
+            f"🔢 Кол-во: {row[2]}\n"
+            f"⚙️ Состояние: {condition}\n"
+            f"💰 Цена: {row[4]}\n\n"
+            f"🔒 Контакты скрыты\n"
+            f"📩 Связь через администратора\n\n"
+            f"🕒 {now}        {ad_id}"
+        )
 
-    await bot.send_message(CHANNEL_ID, text, parse_mode="HTML")
+        kb = InlineKeyboardMarkup(inline_keyboard=[
+            [InlineKeyboardButton(text="📩 Связаться с админом", url=f"https://t.me/{ADMIN_USERNAME}")]
+        ])
+
+        await bot.send_message(CHANNEL_ID, text, reply_markup=kb, parse_mode="HTML")
+
+    else:
+        text = (
+            f"{type_text}\n\n"
+            f"🧿 <b>{row[1]}</b>\n"
+            f"🔢 Кол-во: {row[2]}\n"
+            f"⚙️ Состояние: {condition}\n"
+            f"💰 Цена: {row[4]}\n"
+            f"📞 {row[5]}"
+            f"{desc_text}\n\n"
+            f"🕒 {now}        {ad_id}"
+        )
+
+        await bot.send_message(CHANNEL_ID, text, parse_mode="HTML")
 
     await callback.message.edit_text("✅ Одобрено")
     await callback.answer()
@@ -513,6 +529,9 @@ async def main():
     print("БОТ СТАРТОВАЛ")
     init_db()
     await bot.delete_webhook(drop_pending_updates=True)
+
+    asyncio.create_task(archive_old_ads())
+    
     await dp.start_polling(bot)
 
 if __name__ == "__main__":

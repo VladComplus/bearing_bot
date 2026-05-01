@@ -321,7 +321,7 @@ async def get_phone(message: Message, state: FSMContext):
 @dp.message(Form.desc)
 async def get_desc(message: Message, state: FSMContext):
         if message.text == "⏭ Пропустить":
-        desc = ""
+            desc = ""
     else:
         desc = message.text.strip()
 

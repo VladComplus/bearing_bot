@@ -296,7 +296,7 @@ async def get_desc(message: Message, state: FSMContext):
     if desc and len(desc) > 250:
         await message.answer("❌ Слишком длинный текст")
         return
-        
+
     if desc and contains_stop_word(desc):
         await message.answer("❌ Ошибка ввод")
         return
@@ -305,7 +305,9 @@ async def get_desc(message: Message, state: FSMContext):
     ads = load_ads()
 
     ad_id = generate_id(ads)
+
     now = datetime.now(ZoneInfo("Europe/Kyiv")).strftime('%d.%m.%Y %H:%M')
+    now_dt = datetime.now(ZoneInfo("Europe/Kyiv"))
 
     condition = data['condition'].replace("🆕 ", "").replace("♻️ ", "").lower()
 
@@ -323,24 +325,22 @@ async def get_desc(message: Message, state: FSMContext):
         f"🕒 {now}        {ad_id}"
     )
 
-    now_dt = datetime.now(ZoneInfo("Europe/Kyiv"))
+    ads.append({
+        **data,
+        "id": ad_id,
+        "desc": desc,
 
-ads.append({
-    **data,
-    "id": ad_id,
-    "desc": desc,
+        "user_id": message.from_user.id,
+        "username": message.from_user.username,
+        "first_name": message.from_user.first_name,
+        "last_name": message.from_user.last_name,
 
-    "user_id": message.from_user.id,
-    "username": message.from_user.username,
-    "first_name": message.from_user.first_name,
-    "last_name": message.from_user.last_name,
-
-    "created_at": now_dt.isoformat(),
-    "expires_at": (now_dt + timedelta(days=90)).isoformat(),
-    "archived": False,
-    "notified_85": False
+        "created_at": now_dt.isoformat(),
+        "expires_at": (now_dt + timedelta(days=90)).isoformat(),
+        "archived": False,
+        "notified_85": False
     })
-    
+
     save_ads(ads)
 
     if data.get("moderation"):
@@ -366,51 +366,6 @@ ads.append({
 
         await message.answer("✅ Опубликовано", reply_markup=main_kb)
 
-    await state.clear()
-@dp.message(Form.search)
-async def search_ads(message: Message, state: FSMContext):
-    query = message.text.strip().lower()
-
-    ads = load_ads()
-
-    results = []
-
-    for ad in ads:
-        text = (
-            ad.get("name", "") + " " +
-            ad.get("desc", "")
-        ).lower()
-
-        if query in text:
-            results.append(ad)
-
-    if not results:
-        await message.answer("❌ Ничего не найдено", reply_markup=main_kb)
-        await state.clear()
-        return
-
-    for ad in results[:5]:
-        condition = ad['condition'].replace("🆕 ", "").replace("♻️ ", "").lower()
-
-        type_text = "📢 <b>ПРОДАМ</b>" if "Продам" in ad['type'] else "💵 <b>КУПЛЮ</b>"
-        desc_text = f"\n📖 Доп. информация: {ad['desc']}" if ad.get("desc") else ""
-
-        now = datetime.now(ZoneInfo("Europe/Kyiv")).strftime('%d.%m.%Y %H:%M')
-
-        text = (
-            f"{type_text}\n\n"
-            f"🧿 <b>{ad['name']}</b>\n"
-            f"🔢 Кол-во: {ad['quantity']}\n"
-            f"⚙️ Состояние: {condition}\n"
-            f"💰 Цена: {ad['price']}\n"
-            f"📞 {ad['phone']}"
-            f"{desc_text}\n\n"
-            f"🕒 {now}        {ad['id']}"
-        )
-
-        await message.answer(text, parse_mode="HTML")
-
-    await message.answer(f"🔎 Найдено: {len(results)}", reply_markup=main_kb)
     await state.clear()
 
 # =========================

@@ -612,7 +612,7 @@ async def get_desc(message: Message, state: FSMContext):
     conn.commit()
     conn.close()
 
-        await message.answer("✅ Опубликовано", reply_markup=main_kb)
+    await message.answer("✅ Опубликовано", reply_markup=main_kb)
 
     await state.clear()
 

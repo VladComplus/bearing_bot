@@ -120,7 +120,8 @@ def init_db():
         user_id INTEGER,
         created_at TEXT,
         expires_at TEXT,
-        archived INTEGER DEFAULT 0
+        archived INTEGER DEFAULT 0,
+        channel_message_id INTEGER
     )
     """)
 

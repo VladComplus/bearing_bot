@@ -445,8 +445,8 @@ async def get_desc(message: Message, state: FSMContext):
         data['phone'],
         desc,
         message.from_user.id,
-        now_dt.isoformat(),
-        (now_dt + timedelta(days=1)).isoformat()
+        now_dt.strftime("%Y-%m-%d %H:%M:%S"),
+        (now_dt + timedelta(days=1)).strftime("%Y-%m-%d %H:%M:%S")
     ))
 
     conn.commit()

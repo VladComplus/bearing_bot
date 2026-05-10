@@ -22,6 +22,12 @@ TOKEN = os.getenv("BOT_TOKEN")
 CHANNEL_ID = -1003955162793
 ADMIN_ID = 1833282667
 ADMIN_USERNAME = "blackberrySE"
+
+logging.basicConfig(level=logging.INFO)
+
+bot = Bot(token=TOKEN)
+dp = Dispatcher()
+
 from aiogram.filters import Command
 import sqlite3
 
@@ -57,11 +63,6 @@ async def db_view(message: Message):
         text += f"{r[0]} | {r[1]} | {status}\n"
 
     await message.answer(text)
-
-logging.basicConfig(level=logging.INFO)
-
-bot = Bot(token=TOKEN)
-dp = Dispatcher()
 
 # =========================
 # БАЗА

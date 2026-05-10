@@ -249,7 +249,7 @@ async def search_start(message: Message, state: FSMContext):
     
 @dp.message(Form.search)
 async def search_ads(message: Message, state: FSMContext):
-    query = message.text.strip().lower()
+    query = normalize_text(message.text.strip())
 
     conn = sqlite3.connect("ads.db")
     cursor = conn.cursor()
@@ -257,10 +257,10 @@ async def search_ads(message: Message, state: FSMContext):
     cursor.execute("""
     SELECT id, type, name, quantity, condition, price, phone, desc, created_at, archived
     FROM ads
-    WHERE lower(name) LIKE ?
+    WHERE REPLACE(REPLACE(REPLACE(lower(name), '-', ''), ' ', ''), '.', '') LIKE ?
     ORDER BY created_at DESC
     LIMIT 10
-    """, (f"%{query}%",))
+    """, (f"%{query.replace('-', '').replace(' ', '').replace('.', '')}%",)
 
     rows = cursor.fetchall()
     conn.close()

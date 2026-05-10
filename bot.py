@@ -59,8 +59,13 @@ async def db_view(message: Message):
     text = "📦 Последние объявления:\n\n"
 
     for r in rows:
-        status = "🔒 архив" if r[4] == 1 else "🟢 актив"
-        text += f"{r[0]} | {r[1]} | {status}\n"
+    status = "🔒 архив" if r[4] == 1 else "🟢 актив"
+
+    text += (
+        f"{r[0]} | {r[1]} | {r[2]} грн\n"
+        f"📞 {r[3]}\n"
+        f"{status}\n\n"
+    )
 
     await message.answer(text)
 

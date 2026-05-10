@@ -594,11 +594,23 @@ async def get_desc(message: Message, state: FSMContext):
         await message.answer("⏳ На модерации", reply_markup=main_kb)
 
     else:
-        await bot.send_message(
-            CHANNEL_ID,
-            text,
-            parse_mode="HTML"
+        sent = await bot.send_message(
+        CHANNEL_ID,
+        text,
+        parse_mode="HTML"
         )
+
+    conn = sqlite3.connect("ads.db")
+    cursor = conn.cursor()
+
+    cursor.execute("""
+    UPDATE ads
+    SET channel_message_id = ?
+    WHERE id = ?
+    """, (sent.message_id, ad_id))
+
+    conn.commit()
+    conn.close()
 
         await message.answer("✅ Опубликовано", reply_markup=main_kb)
 

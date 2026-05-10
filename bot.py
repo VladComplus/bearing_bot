@@ -58,7 +58,7 @@ async def db_view(message: Message):
 
         for r in rows:
             status = "🔒 архив" if r[4] == 1 else "🟢 актив"
-            msg += f"{r[0]} | {r[1]} | {r[2]} грн\n{status}\n\n"
+            msg += f"{r[0]} | {r[1]} | {r[2]} \n{status}\n\n"
 
         await message.answer(msg)
         return

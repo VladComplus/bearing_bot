@@ -581,7 +581,7 @@ async def archive_old_ads():
         conn = sqlite3.connect("ads.db")
         cursor = conn.cursor()
 
-        now = datetime.now(ZoneInfo("Europe/Kyiv")).isoformat()
+        now = datetime.now(ZoneInfo("Europe/Kyiv")).strftime("%Y-%m-%d %H:%M:%S")
 
         cursor.execute("""
         UPDATE ads

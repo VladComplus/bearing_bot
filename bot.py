@@ -94,7 +94,8 @@ async def db_view(message: Message):
         f"📞 {row[5]}\n"
         f"{status}"
         f"{desc_text}\n\n"
-        f"🆔 {row[0]}"
+        f"🆔 {row[0]}\n"
+        f"📨 MSG_ID: {row[9]}"
     )
 
     await message.answer(msg)
@@ -647,7 +648,8 @@ async def approve_ad(callback: CallbackQuery):
     cursor = conn.cursor()
 
     cursor.execute("""
-SELECT type, name, quantity, condition, price, phone, desc, created_at, archived
+SELECT id, name, quantity, condition, price, phone, desc,
+archived, created_at, channel_message_id
 FROM ads
 WHERE id = ?
 """, (ad_id,))

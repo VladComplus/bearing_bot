@@ -42,12 +42,12 @@ async def db_view(message: Message):
     conn = sqlite3.connect("ads.db")
     cursor = conn.cursor()
 
-    cursor.execute("""
-    SELECT id, name, price, phone, archived, created_at
+    cursor.execute(***
+    SELECT id, name, quantity, condition, price, phone, archived, created_at
     FROM ads
     ORDER BY created_at DESC
-    LIMIT 20
-    """)
+    LIMIT 10
+    ***)
 
     rows = cursor.fetchall()
     conn.close()
@@ -59,11 +59,11 @@ async def db_view(message: Message):
     text = "📦 Последние объявления:\n\n"
 
     for r in rows:
-    status = "🔒 архив" if r[4] == 1 else "🟢 актив"
+    status = "🔒 архив" if r[6] == 1 else "🟢 актив"
 
     text += (
-        f"{r[0]} | {r[1]} | {r[2]} грн\n"
-        f"📞 {r[3]}\n"
+        f"{r[0]} | {r[1]} | {r[4]}\n"
+        f"📞 {r[5]}\n"
         f"{status}\n\n"
     )
 

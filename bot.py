@@ -42,12 +42,12 @@ async def db_view(message: Message):
     conn = sqlite3.connect("ads.db")
     cursor = conn.cursor()
 
-    cursor.execute(***
+    cursor.execute("""
     SELECT id, name, quantity, condition, price, phone, archived, created_at
     FROM ads
     ORDER BY created_at DESC
     LIMIT 10
-    ***)
+    """)
 
     rows = cursor.fetchall()
     conn.close()

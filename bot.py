@@ -254,13 +254,16 @@ async def search_ads(message: Message, state: FSMContext):
     conn = sqlite3.connect("ads.db")
     cursor = conn.cursor()
 
+    search_query = query.replace("-", "").replace(" ", "").replace(".", "")
+
     cursor.execute("""
-    SELECT id, type, name, quantity, condition, price, phone, desc, created_at, archived
+    SELECT id, type, name, quantity, condition, price,
+       phone, desc, created_at, archived
     FROM ads
     WHERE REPLACE(REPLACE(REPLACE(lower(name), '-', ''), ' ', ''), '.', '') LIKE ?
     ORDER BY created_at DESC
     LIMIT 10
-    """, (f"%{query.replace('-', '').replace(' ', '').replace('.', '')}%",)
+    """, (f"%{search_query}%",))
 
     rows = cursor.fetchall()
     conn.close()

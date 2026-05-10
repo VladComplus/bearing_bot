@@ -249,37 +249,56 @@ async def search_start(message: Message, state: FSMContext):
     
 @dp.message(Form.search)
 async def search_ads(message: Message, state: FSMContext):
-    query = normalize_text(message.text.strip())
+    query = message.text.strip()
+
+    search_query = (
+        query.lower()
+        .replace("-", "")
+        .replace(" ", "")
+        .replace(".", "")
+    )
 
     conn = sqlite3.connect("ads.db")
     cursor = conn.cursor()
 
-    search_query = query.replace("-", "").replace(" ", "").replace(".", "")
-
     cursor.execute("""
-    SELECT id, type, name, quantity, condition, price,
-       phone, desc, created_at, archived
+    SELECT id, type, name, quantity, condition,
+           price, phone, desc, created_at, archived
     FROM ads
-    WHERE REPLACE(REPLACE(REPLACE(lower(name), '-', ''), ' ', ''), '.', '') LIKE ?
     ORDER BY created_at DESC
-    LIMIT 10
-    """, (f"%{search_query}%",))
+    """)
 
     rows = cursor.fetchall()
     conn.close()
 
-    if not rows:
+    found = []
+
+    for row in rows:
+        db_name = (
+            row[2].lower()
+            .replace("-", "")
+            .replace(" ", "")
+            .replace(".", "")
+        )
+
+        if search_query in db_name:
+            found.append(row)
+
+    if not found:
         await message.answer(
-        "❌ Ничего не найдено\n\nВыберите действие:",
-        reply_markup=main_kb
+            "❌ Ничего не найдено\n\nВыберите действие:",
+            reply_markup=main_kb
         )
         await state.clear()
         return
 
-    for row in rows:
+    for row in found[:10]:
         ad_id = row[0]
+
         type_text = "📢 <b>ПРОДАМ</b>" if "Продам" in row[1] else "💵 <b>КУПЛЮ</b>"
+
         condition = row[4].replace("🆕 ", "").replace("♻️ ", "").lower()
+
         now = datetime.fromisoformat(row[8]).strftime('%d.%m.%Y %H:%M')
 
         is_archived = row[9] == 1
@@ -320,6 +339,8 @@ async def search_ads(message: Message, state: FSMContext):
             )
 
             await message.answer(text, parse_mode="HTML")
+
+    await message.answer("Выберите действие:", reply_markup=main_kb)
 
     await state.clear()
 

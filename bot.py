@@ -33,41 +33,71 @@ import sqlite3
 
 @dp.message(Command("db"))
 async def db_view(message: Message):
-
-    # защита доступа
     if message.from_user.id != ADMIN_ID:
         await message.answer("⛔ Доступ запрещен")
         return
+
+    text = message.text.strip().split()
+
+    # если просто /db → список
+    if len(text) == 1:
+        conn = sqlite3.connect("ads.db")
+        cursor = conn.cursor()
+
+        cursor.execute("""
+        SELECT id, name, price, phone, archived, created_at
+        FROM ads
+        ORDER BY created_at DESC
+        LIMIT 20
+        """)
+
+        rows = cursor.fetchall()
+        conn.close()
+
+        msg = "📦 Последние объявления:\n\n"
+
+        for r in rows:
+            status = "🔒 архив" if r[4] == 1 else "🟢 актив"
+            msg += f"{r[0]} | {r[1]} | {r[2]} грн\n{status}\n\n"
+
+        await message.answer(msg)
+        return
+
+    # если /db IDxxxx → одно объявление
+    ad_id = text[1]
 
     conn = sqlite3.connect("ads.db")
     cursor = conn.cursor()
 
     cursor.execute("""
-    SELECT id, name, quantity, condition, price, phone, archived, created_at
+    SELECT id, name, quantity, condition, price, phone, desc, archived, created_at
     FROM ads
-    ORDER BY created_at DESC
-    LIMIT 10
-    """)
+    WHERE id = ?
+    """, (ad_id,))
 
-    rows = cursor.fetchall()
+    row = cursor.fetchone()
     conn.close()
 
-    if not rows:
-        await message.answer("База пуста")
+    if not row:
+        await message.answer("❌ Объявление не найдено")
         return
 
-    text = "📦 Последние объявления:\n\n"
+    status = "🔒 АРХИВ" if row[7] == 1 else "🟢 АКТИВ"
 
-    for r in rows:
-        status = "🔒 архив" if r[6] == 1 else "🟢 актив"
+    desc_text = f"\n📖 {row[6]}" if row[6] else ""
 
-        text += (
-        f"{r[0]} | {r[1]} | {r[4]}\n"
-        f"📞 {r[5]}\n"
-        f"{status}\n\n"
-        )
+    msg = (
+        f"📦 <b>{row[1]}</b>\n"
+        f"🔢 Кол-во: {row[2]}\n"
+        f"⚙️ Состояние: {row[3]}\n"
+        f"💰 Цена: {row[4]}\n"
+        f"📞 {row[5]}\n"
+        f"{status}"
+        f"{desc_text}\n\n"
+        f"🆔 {row[0]}"
+    )
 
-    await message.answer(text)
+    await message.answer(msg)
 
 # =========================
 # БАЗА

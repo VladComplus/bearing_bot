@@ -99,6 +99,32 @@ async def db_view(message: Message):
 
     await message.answer(msg)
 
+@dp.message(Command("upgrade"))
+async def upgrade_db(message: Message):
+
+    if message.from_user.id != ADMIN_ID:
+        await message.answer("⛔ Доступ запрещен")
+        return
+
+    conn = sqlite3.connect("ads.db")
+    cursor = conn.cursor()
+
+    try:
+        cursor.execute("""
+        ALTER TABLE ads
+        ADD COLUMN channel_message_id INTEGER
+        """)
+
+        conn.commit()
+
+        await message.answer("✅ Колонка channel_message_id добавлена")
+
+    except Exception as e:
+        await message.answer(f"⚠️ {e}")
+
+    conn.close()
+
+
 # =========================
 # БАЗА
 # =========================

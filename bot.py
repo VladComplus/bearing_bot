@@ -266,7 +266,11 @@ async def search_ads(message: Message, state: FSMContext):
     conn.close()
 
     if not rows:
-        await message.answer("❌ Ничего не найдено")
+        await message.answer(
+        "❌ Ничего не найдено\n\nВыберите действие:",
+        reply_markup=main_kb
+        )
+        await state.clear()
         return
 
     for row in rows:

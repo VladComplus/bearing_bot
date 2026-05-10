@@ -22,7 +22,41 @@ TOKEN = os.getenv("BOT_TOKEN")
 CHANNEL_ID = -1003955162793
 ADMIN_ID = 1833282667
 ADMIN_USERNAME = "blackberrySE"
+from aiogram.filters import Command
+import sqlite3
 
+@dp.message(Command("db"))
+async def db_view(message: Message):
+
+    # защита доступа
+    if message.from_user.id != ADMIN_ID:
+        await message.answer("⛔ Доступ запрещен")
+        return
+
+    conn = sqlite3.connect("ads.db")
+    cursor = conn.cursor()
+
+    cursor.execute("""
+    SELECT id, name, price, phone, archived, created_at
+    FROM ads
+    ORDER BY created_at DESC
+    LIMIT 20
+    """)
+
+    rows = cursor.fetchall()
+    conn.close()
+
+    if not rows:
+        await message.answer("База пуста")
+        return
+
+    text = "📦 Последние объявления:\n\n"
+
+    for r in rows:
+        status = "🔒 архив" if r[4] == 1 else "🟢 актив"
+        text += f"{r[0]} | {r[1]} | {status}\n"
+
+    await message.answer(text)
 
 logging.basicConfig(level=logging.INFO)
 

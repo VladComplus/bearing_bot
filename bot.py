@@ -99,6 +99,7 @@ async def db_view(message: Message):
 
     await message.answer(msg)
 
+# ===========Подлежит удалению после теста до conn.close==============
 @dp.message(Command("upgrade"))
 async def upgrade_db(message: Message):
 

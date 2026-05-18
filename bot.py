@@ -601,18 +601,20 @@ async def get_desc(message: Message, state: FSMContext):
 
     if data.get("moderation"):
 
-        mod_kb = InlineKeyboardMarkup(inline_keyboard=[
-        [
-            InlineKeyboardButton(
-                text="✅ Одобрить",
-                callback_data=f"approve_{ad_id}"
-            ),
-            InlineKeyboardButton(
-                text="❌ Отклонить",
-                callback_data=f"reject_{ad_id}"
-            )
-        ]
-    ])
+        mod_kb = InlineKeyboardMarkup(
+        inline_keyboard=[
+            [
+                InlineKeyboardButton(
+                    text="✅ Одобрить",
+                    callback_data=f"approve_{ad_id}"
+                ),
+                InlineKeyboardButton(
+                    text="❌ Отклонить",
+                    callback_data=f"reject_{ad_id}"
+                    )
+                ]
+            ]
+        )
 
     await bot.send_message(
         ADMIN_ID,
@@ -626,7 +628,7 @@ async def get_desc(message: Message, state: FSMContext):
         reply_markup=main_kb
     )
 
-else:
+    else:
 
     sent = await bot.send_message(
         CHANNEL_ID,
@@ -637,11 +639,14 @@ else:
     conn = sqlite3.connect("ads.db")
     cursor = conn.cursor()
 
-    cursor.execute("""
-    UPDATE ads
-    SET channel_message_id = ?
-    WHERE id = ?
-    """, (sent.message_id, ad_id))
+    cursor.execute(
+        """
+        UPDATE ads
+        SET channel_message_id = ?
+        WHERE id = ?
+        """,
+        (sent.message_id, ad_id)
+    )
 
     conn.commit()
     conn.close()

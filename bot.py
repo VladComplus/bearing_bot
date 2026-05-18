@@ -127,21 +127,21 @@ async def upgrade_db(message: Message):
     conn.close()
 # ===========Подлежит удалению до conn.close==============
 
-@dp.message(Command("db_ads"))
-async def db_ads(message: Message):
+@dp.message(Command("db_tables"))
+async def db_tables(message: Message):
     if message.from_user.id != ADMIN_ID:
         return
 
     conn = sqlite3.connect("board.db")
     cursor = conn.cursor()
 
-    cursor.execute("PRAGMA table_info(ads)")
-    rows = cursor.fetchall()
+    cursor.execute("SELECT name FROM sqlite_master WHERE type='table'")
+    tables = cursor.fetchall()
 
-    text = "📦 Структура таблицы ads:\n\n"
+    text = "📦 Таблицы базы:\n\n"
 
-    for row in rows:
-        text += f"{row[1]} | {row[2]}\n"
+    for table in tables:
+        text += f"{table[0]}\n"
 
     conn.close()
 

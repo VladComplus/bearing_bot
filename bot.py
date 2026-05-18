@@ -600,26 +600,13 @@ async def get_desc(message: Message, state: FSMContext):
     conn.close()
 
     if data.get("moderation"):
-        mod_kb = InlineKeyboardMarkup(inline_keyboard=[
-            [InlineKeyboardButton(text="✅ Одобрить", callback_data=f"approve_{ad_id}"),
-             InlineKeyboardButton(text="❌ Отклонить", callback_data=f"reject_{ad_id}")]
-        ])
-
-        await bot.send_message(
-            ADMIN_ID,
-            text + "\n\n⏳ На модерации",
-            reply_markup=mod_kb,
-            parse_mode="HTML"
-        )
-
-        await message.answer("⏳ На модерации", reply_markup=main_kb)
-
+    ...
     else:
-        sent = await bot.send_message(
+    sent = await bot.send_message(
         CHANNEL_ID,
         text,
         parse_mode="HTML"
-        )
+    )
 
     conn = sqlite3.connect("ads.db")
     cursor = conn.cursor()
@@ -632,10 +619,6 @@ async def get_desc(message: Message, state: FSMContext):
 
     conn.commit()
     conn.close()
-
-    await message.answer("✅ Опубликовано", reply_markup=main_kb)
-
-    await state.clear()
 
 # =========================
 # READ FULL DESCRIPTION
@@ -744,10 +727,64 @@ async def archive_old_ads():
         now = datetime.now(ZoneInfo("Europe/Kyiv")).strftime("%Y-%m-%d %H:%M:%S")
 
         cursor.execute("""
-        UPDATE ads
-        SET archived = 1
-        WHERE expires_at < ? AND archived = 0
+        SELECT id, name, quantity, condition,
+               price, phone, desc,
+               created_at, channel_message_id
+        FROM ads
+        WHERE expires_at < ?
+        AND archived = 0
         """, (now,))
+
+        rows = cursor.fetchall()
+
+        for row in rows:
+            ad_id = row[0]
+
+            condition = row[3].replace("🆕 ", "").replace("♻️ ", "").lower()
+
+            created = datetime.fromisoformat(row[7]).strftime('%d.%m.%Y %H:%M')
+
+            desc_text = f"\n📖 Доп. информация: {row[6]}" if row[6] else ""
+
+            text = (
+                f"🔒 <b>АРХИВНОЕ ОБЪЯВЛЕНИЕ</b>\n\n"
+                f"🧿 <b>{row[1]}</b>\n"
+                f"🔢 Кол-во: {row[2]}\n"
+                f"⚙️ Состояние: {condition}\n"
+                f"💰 Цена: {row[4]}\n"
+                f"📩 Контакты скрыты"
+                f"{desc_text}\n\n"
+                f"🕒 {created}        {ad_id}"
+            )
+
+            kb = InlineKeyboardMarkup(
+                inline_keyboard=[
+                    [
+                        InlineKeyboardButton(
+                            text="📩 Связаться с админом",
+                            url=f"https://t.me/{ADMIN_USERNAME}"
+                        )
+                    ]
+                ]
+            )
+
+            try:
+                await bot.edit_message_text(
+                    chat_id=CHANNEL_ID,
+                    message_id=row[8],
+                    text=text,
+                    parse_mode="HTML",
+                    reply_markup=kb
+                )
+
+            except Exception as e:
+                print(f"Ошибка архивации {ad_id}: {e}")
+
+            cursor.execute("""
+            UPDATE ads
+            SET archived = 1
+            WHERE id = ?
+            """, (ad_id,))
 
         conn.commit()
         conn.close()

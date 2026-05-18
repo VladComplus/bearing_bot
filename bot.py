@@ -125,7 +125,27 @@ async def upgrade_db(message: Message):
         await message.answer(f"⚠️ {e}")
 
     conn.close()
+# ===========Подлежит удалению до conn.close==============
 
+@dp.message(Command("db_ads"))
+async def db_ads(message: Message):
+    if message.from_user.id != ADMIN_ID:
+        return
+
+    conn = sqlite3.connect("board.db")
+    cursor = conn.cursor()
+
+    cursor.execute("PRAGMA table_info(ads)")
+    rows = cursor.fetchall()
+
+    text = "📦 Структура таблицы ads:\n\n"
+
+    for row in rows:
+        text += f"{row[1]} | {row[2]}\n"
+
+    conn.close()
+
+    await message.answer(text)
 
 # =========================
 # БАЗА

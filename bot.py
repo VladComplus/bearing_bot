@@ -628,7 +628,7 @@ async def get_desc(message: Message, state: FSMContext):
         reply_markup=main_kb
     )
 
-    else:
+else:
 
     sent = await bot.send_message(
         CHANNEL_ID,

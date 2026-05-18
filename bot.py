@@ -723,7 +723,7 @@ async def reject_ad(callback: CallbackQuery):
 async def archive_old_ads():
     while True:
         
-        print("ARCHIVE CHECK RUN")  
+        print("ARCHIVE CHECK RUN11")  
         
         conn = sqlite3.connect("ads.db")
         cursor = conn.cursor()

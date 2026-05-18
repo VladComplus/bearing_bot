@@ -728,12 +728,11 @@ async def archive_old_ads():
         now = datetime.now(ZoneInfo("Europe/Kyiv")).strftime("%Y-%m-%d %H:%M:%S")
 
         cursor.execute("""
-        SELECT id, name, quantity, condition,
-               price, phone, desc,
-               created_at, channel_message_id
+        SELECT id, name, quantity, condition, price, created_at, channel_message_id
         FROM ads
         WHERE expires_at < ?
         AND archived = 0
+        AND channel_message_id IS NOT NULL
         """, (now,))
 
         rows = cursor.fetchall()
@@ -741,53 +740,42 @@ async def archive_old_ads():
         for row in rows:
             ad_id = row[0]
 
-            condition = row[3].replace("🆕 ", "").replace("♻️ ", "").lower()
-
-            created = datetime.fromisoformat(row[7]).strftime('%d.%m.%Y %H:%M')
-
-            desc_text = f"\n📖 Доп. информация: {row[6]}" if row[6] else ""
-
-            text = (
-                f"🔒 <b>АРХИВНОЕ ОБЪЯВЛЕНИЕ</b>\n\n"
-                f"🧿 <b>{row[1]}</b>\n"
-                f"🔢 Кол-во: {row[2]}\n"
-                f"⚙️ Состояние: {condition}\n"
-                f"💰 Цена: {row[4]}\n"
-                f"📩 Контакты скрыты"
-                f"{desc_text}\n\n"
-                f"🕒 {created}        {ad_id}"
-            )
-
-            kb = InlineKeyboardMarkup(
-                inline_keyboard=[
-                    [
-                        InlineKeyboardButton(
-                            text="📩 Связаться с админом",
-                            url=f"https://t.me/{ADMIN_USERNAME}"
-                        )
-                    ]
-                ]
-            )
-
             try:
-                await bot.edit_message_text(
-                    chat_id=CHANNEL_ID,
-                    message_id=row[8],
-                    text=text,
-                    parse_mode="HTML",
-                    reply_markup=kb
+                text = (
+                    f"🔒 <b>АРХИВНОЕ ОБЪЯВЛЕНИЕ</b>\n\n"
+                    f"🧿 <b>{row[1]}</b>\n"
+                    f"🔢 Кол-во: {row[2]}\n"
+                    f"⚙️ Состояние: {row[3]}\n"
+                    f"💰 Цена: {row[4]}\n\n"
+                    f"📩 Связаться с администратором"
                 )
 
+                kb = InlineKeyboardMarkup(inline_keyboard=[
+                    [InlineKeyboardButton(
+                        text="📩 Написать администратору",
+                        url=f"https://t.me/{ADMIN_USERNAME}"
+                    )]
+                ])
+
+                await bot.edit_message_text(
+                    chat_id=CHANNEL_ID,
+                    message_id=row[6],
+                    text=text,
+                    reply_markup=kb,
+                    parse_mode="HTML"
+                )
+
+                cursor.execute("""
+                UPDATE ads
+                SET archived = 1
+                WHERE id = ?
+                """, (ad_id,))
+
+                conn.commit()
+
             except Exception as e:
-                print(f"Ошибка архивации {ad_id}: {e}")
+                print(f"Archive error {ad_id}: {e}")
 
-            cursor.execute("""
-            UPDATE ads
-            SET archived = 1
-            WHERE id = ?
-            """, (ad_id,))
-
-        conn.commit()
         conn.close()
 
         await asyncio.sleep(3600)

@@ -637,14 +637,9 @@ async def get_desc(message: Message, state: FSMContext):
     conn.commit()
     conn.close()
 
-    await message.answer(
-    "📷 Отправьте до 4 фотографий.\n\n"
-    "После загрузки нажмите «✅ Готово».\n"
-    "Если фотографии не нужны — «⏭ Пропустить».",
-    reply_markup=photo_kb
-    )
-
-    await state.set_state(Form.photos)
+    await message.answer("✅ Опубликовано", reply_markup=main_kb)
+    await state.clear()
+   
 
 # =========================
 # READ FULL DESCRIPTION

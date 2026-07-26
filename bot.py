@@ -173,6 +173,16 @@ def init_db():
     )
     """)
 
+       
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS photos (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    ad_id TEXT NOT NULL,
+    file_id TEXT NOT NULL,
+    position INTEGER NOT NULL
+    )
+    """)
+
     conn.commit()
     conn.close()
 

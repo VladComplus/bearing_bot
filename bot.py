@@ -570,6 +570,7 @@ async def get_desc(message: Message, state: FSMContext):
         return
 
     data = await state.get_data()
+    await state.update_data(desc=desc, photos=[])
 
     ad_id = generate_id()
 

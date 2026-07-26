@@ -301,6 +301,7 @@ class Form(StatesGroup):
     price = State()
     phone = State()
     desc = State()
+    photos = State()
     search = State()
 
 # =========================
@@ -330,6 +331,13 @@ skip_kb = ReplyKeyboardMarkup(
     resize_keyboard=True
 )
 
+photo_kb = ReplyKeyboardMarkup(
+    keyboard=[
+        [KeyboardButton(text="✅ Готово")],
+        [KeyboardButton(text="⏭ Пропустить")]
+    ],
+    resize_keyboard=True
+)
 # =========================
 # START
 # =========================

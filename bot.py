@@ -148,6 +148,50 @@ async def db_tables(message: Message):
 
     await message.answer(text)
 
+@dp.message(Command("photos_db"))
+async def photos_db(message: Message):
+
+    if message.from_user.id != ADMIN_ID:
+        await message.answer("⛔ Доступ запрещен")
+        return
+
+    conn = sqlite3.connect("ads.db")
+    cursor = conn.cursor()
+
+    cursor.execute("PRAGMA table_info(photos)")
+    columns = cursor.fetchall()
+
+    text = "📷 Таблица photos:\n\n"
+
+    for column in columns:
+        text += f"{column[1]}\n"
+
+    cursor.execute("""
+    SELECT ad_id, position, channel_message_id
+    FROM photos
+    ORDER BY id DESC
+    LIMIT 10
+    """)
+
+    rows = cursor.fetchall()
+
+    text += "\nПоследние записи:\n\n"
+
+    if not rows:
+        text += "Нет записей"
+    else:
+        for row in rows:
+            text += (
+                f"{row[0]} | фото №{row[1]} | "
+                f"MSG_ID: {row[2]}\n"
+            )
+
+    conn.close()
+
+    await message.answer(text)
+
+    
+
 # =========================
 # БАЗА
 # =========================

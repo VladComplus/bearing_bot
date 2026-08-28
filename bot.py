@@ -581,6 +581,16 @@ async def get_desc(message: Message, state: FSMContext):
 
     await state.set_state(Form.photos)
 
+    await message.answer(
+        "📷 Загрузите до 4 фотографий.\n\n"
+        "Можно отправлять фотографии по одной.\n"
+        "После загрузки нажмите «✅ Готово».\n"
+        "Если фотографии не нужны — нажмите «⏭ Пропустить».",
+        reply_markup=photo_kb
+    )
+
+    await state.set_state(Form.photos)
+
     ad_id = generate_id()
 
     now_dt = datetime.now(ZoneInfo("Europe/Kyiv"))

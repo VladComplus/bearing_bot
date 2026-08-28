@@ -12,7 +12,8 @@ from aiogram import Bot, Dispatcher, F
 from aiogram.types import (
     Message, ReplyKeyboardMarkup, KeyboardButton,
     InlineKeyboardMarkup, InlineKeyboardButton,
-    CallbackQuery, ReplyKeyboardRemove
+    CallbackQuery, ReplyKeyboardRemove,
+    InputMediaPhoto
 )
 from aiogram.filters import Command
 from aiogram.fsm.state import StatesGroup, State
@@ -584,6 +585,198 @@ async def get_desc(message: Message, state: FSMContext):
 # =========================
 # PHOTOS
 # =========================
+
+@dp.message(Form.photos, F.photo)
+async def get_photo(message: Message, state: FSMContext):
+
+    data = await state.get_data()
+    photos = data.get("photos", [])
+
+    if len(photos) >= 4:
+        await message.answer(
+            "❌ Можно загрузить максимум 4 фотографии.\n"
+            "Нажмите «✅ Готово».",
+            reply_markup=photo_kb
+        )
+        return
+
+    file_id = message.photo[-1].file_id
+    photos.append(file_id)
+
+    await state.update_data(photos=photos)
+
+    if len(photos) < 4:
+        await message.answer(
+            f"📷 Фотография {len(photos)} из 4 загружена.\n\n"
+            "Можете отправить ещё фотографию "
+            "или нажмите «✅ Готово».",
+            reply_markup=photo_kb
+        )
+    else:
+        await message.answer(
+            "✅ Загружено 4 фотографии — это максимум.\n"
+            "Нажмите «✅ Готово».",
+            reply_markup=photo_kb
+        )
+
+
+@dp.message(Form.photos, F.text == "⏭ Пропустить")
+async def skip_photos(message: Message, state: FSMContext):
+
+    await state.update_data(photos=[])
+
+    await publish_ad(message, state)
+
+
+@dp.message(Form.photos, F.text == "✅ Готово")
+async def finish_photos(message: Message, state: FSMContext):
+
+    data = await state.get_data()
+    photos = data.get("photos", [])
+
+    if not photos:
+        await message.answer(
+            "ℹ️ Фотографии не загружены.\n"
+            "Нажмите «⏭ Пропустить», если хотите продолжить без фото.",
+            reply_markup=photo_kb
+        )
+        return
+
+    await publish_ad(message, state)
+
+
+# =========================
+# PUBLISH AD
+# =========================
+
+async def publish_ad(message: Message, state: FSMContext):
+
+    data = await state.get_data()
+    photos = data.get("photos", [])
+
+    ad_id = generate_id()
+
+    now_dt = datetime.now(ZoneInfo("Europe/Kyiv"))
+    now = now_dt.strftime('%d.%m.%Y %H:%M')
+
+    condition = data['condition'].replace("🆕 ", "").replace("♻️ ", "").lower()
+
+    type_text = "📢 <b>ПРОДАМ</b>" if "Продам" in data['type'] else "💵 <b>КУПЛЮ</b>"
+    desc_text = f"\n📖 Доп. информация: {data['desc']}" if data['desc'] else ""
+
+    text = (
+        f"{type_text}\n\n"
+        f"🧿 <b>{data['name']}</b>\n"
+        f"🔢 Кол-во: {data['quantity']}\n"
+        f"⚙️ Состояние: {condition}\n"
+        f"💰 Цена: {data['price']}\n"
+        f"📞 {data['phone']}"
+        f"{desc_text}\n\n"
+        f"🕒 {now}        {ad_id}"
+    )
+
+    # =========================
+    # SAVE AD
+    # =========================
+
+    conn = sqlite3.connect("ads.db")
+    cursor = conn.cursor()
+
+    cursor.execute("""
+    INSERT INTO ads (
+        id, type, name, quantity, condition, price,
+        phone, desc, user_id, created_at, expires_at, archived
+    )
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0)
+    """, (
+        ad_id,
+        data['type'],
+        data['name'],
+        data['quantity'],
+        data['condition'],
+        data['price'],
+        data['phone'],
+        data['desc'],
+        message.from_user.id,
+        now_dt.strftime("%Y-%m-%d %H:%M:%S"),
+        (now_dt + timedelta(days=1)).strftime("%Y-%m-%d %H:%M:%S")
+    ))
+
+    # =========================
+    # SAVE PHOTOS
+    # =========================
+
+    for position, file_id in enumerate(photos, start=1):
+        cursor.execute("""
+        INSERT INTO photos (ad_id, file_id, position)
+        VALUES (?, ?, ?)
+        """, (ad_id, file_id, position))
+
+    conn.commit()
+    conn.close()
+
+    # =========================
+    # PUBLISH
+    # =========================
+
+    if photos:
+
+        media = []
+
+        for index, file_id in enumerate(photos):
+            if index == 0:
+                media.append(
+                    InputMediaPhoto(
+                        media=file_id,
+                        caption=text,
+                        parse_mode="HTML"
+                    )
+                )
+            else:
+                media.append(
+                    InputMediaPhoto(media=file_id)
+                )
+
+        sent_messages = await bot.send_media_group(
+            CHANNEL_ID,
+            media=media
+        )
+
+        channel_message_id = sent_messages[0].message_id
+
+    else:
+
+        sent = await bot.send_message(
+            CHANNEL_ID,
+            text,
+            parse_mode="HTML"
+        )
+
+        channel_message_id = sent.message_id
+
+    # =========================
+    # SAVE CHANNEL MESSAGE ID
+    # =========================
+
+    conn = sqlite3.connect("ads.db")
+    cursor = conn.cursor()
+
+    cursor.execute("""
+    UPDATE ads
+    SET channel_message_id = ?
+    WHERE id = ?
+    """, (channel_message_id, ad_id))
+
+    conn.commit()
+    conn.close()
+
+    await message.answer(
+        "✅ Опубликовано",
+        reply_markup=main_kb
+    )
+
+    await state.clear()
+
 
 
 # =========================

@@ -777,6 +777,7 @@ async def publish_ad(message: Message, state: FSMContext):
     # PUBLISH
     # =========================
 
+    
     if photos:
 
         media = []
@@ -800,7 +801,29 @@ async def publish_ad(message: Message, state: FSMContext):
             media=media
         )
 
+        # Сохраняем message_id каждой фотографии
+        conn = sqlite3.connect("ads.db")
+        cursor = conn.cursor()
+
+        for position, sent_message in enumerate(sent_messages, start=1):
+            cursor.execute("""
+            UPDATE photos
+            SET channel_message_id = ?
+            WHERE ad_id = ? AND position = ?
+            """, (
+                sent_message.message_id,
+                ad_id,
+                position
+            ))
+
+        conn.commit()
+        conn.close()
+
+        # Первое сообщение медиагруппы используем
+        # как основное сообщение объявления
         channel_message_id = sent_messages[0].message_id
+
+
 
     else:
 

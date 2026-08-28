@@ -757,7 +757,7 @@ async def publish_ad(message: Message, state: FSMContext):
         data['desc'],
         message.from_user.id,
         now_dt.strftime("%Y-%m-%d %H:%M:%S"),
-        (now_dt + timedelta(minutes=2)).strftime("%Y-%m-%d %H:%M:%S")
+        (now_dt + timedelta(days=90)).strftime("%Y-%m-%d %H:%M:%S")
     ))
 
     # =========================
@@ -1116,7 +1116,7 @@ async def archive_old_ads():
 
         conn.close()
 
-        await asyncio.sleep(30)
+        await asyncio.sleep(3600)
 
 
         

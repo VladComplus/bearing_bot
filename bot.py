@@ -180,9 +180,23 @@ def init_db():
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     ad_id TEXT NOT NULL,
     file_id TEXT NOT NULL,
-    position INTEGER NOT NULL
+    position INTEGER NOT NULL,
+    channel_message_id INTEGER
     )
     """)
+   
+    # Добавляем channel_message_id,
+    # если колонка ещё отсутствует
+    cursor.execute("PRAGMA table_info(photos)")
+    columns = [row[1] for row in cursor.fetchall()]
+
+    if "channel_message_id" not in columns:
+        cursor.execute("""
+        ALTER TABLE photos
+        ADD COLUMN channel_message_id INTEGER
+        """)
+
+
 
     conn.commit()
     conn.close()

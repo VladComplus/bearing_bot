@@ -1116,7 +1116,7 @@ async def archive_old_ads():
 
         conn.close()
 
-        await asyncio.sleep(3600)
+        await asyncio.sleep(30)
 
 
         

@@ -757,7 +757,7 @@ async def publish_ad(message: Message, state: FSMContext):
         data['desc'],
         message.from_user.id,
         now_dt.strftime("%Y-%m-%d %H:%M:%S"),
-        (now_dt + timedelta(days=1)).strftime("%Y-%m-%d %H:%M:%S")
+        (now_dt + timedelta(minutes=2)).strftime("%Y-%m-%d %H:%M:%S")
     ))
 
     # =========================
@@ -956,21 +956,25 @@ async def reject_ad(callback: CallbackQuery):
     await callback.message.edit_text("❌ Отклонено")
     await callback.answer()
 
+
 # =========================
 # RUN
 # =========================
 async def archive_old_ads():
     while True:
-        
-        print("ARCHIVE CHECK RUN11")  
-        
+
+        print("ARCHIVE CHECK RUN12")
+
         conn = sqlite3.connect("ads.db")
         cursor = conn.cursor()
 
-        now = datetime.now(ZoneInfo("Europe/Kyiv")).strftime("%Y-%m-%d %H:%M:%S")
+        now = datetime.now(
+            ZoneInfo("Europe/Kyiv")
+        ).strftime("%Y-%m-%d %H:%M:%S")
 
         cursor.execute("""
-        SELECT id, name, quantity, condition, price, created_at, channel_message_id
+        SELECT id, name, quantity, condition, price,
+               created_at, channel_message_id
         FROM ads
         WHERE expires_at < ?
         AND archived = 0
@@ -980,9 +984,57 @@ async def archive_old_ads():
         rows = cursor.fetchall()
 
         for row in rows:
+
             ad_id = row[0]
+            main_message_id = row[6]
 
             try:
+
+                # =========================
+                # GET PHOTO MESSAGE IDS
+                # =========================
+
+                cursor.execute("""
+                SELECT channel_message_id
+                FROM photos
+                WHERE ad_id = ?
+                AND channel_message_id IS NOT NULL
+                ORDER BY position
+                """, (ad_id,))
+
+                photo_rows = cursor.fetchall()
+
+                # =========================
+                # DELETE PHOTOS
+                # =========================
+
+                for photo_row in photo_rows:
+
+                    photo_message_id = photo_row[0]
+
+                    try:
+                        await bot.delete_message(
+                            chat_id=CHANNEL_ID,
+                            message_id=photo_message_id
+                        )
+
+                        print(
+                            f"Deleted photo "
+                            f"{photo_message_id} "
+                            f"for {ad_id}"
+                        )
+
+                    except Exception as e:
+                        print(
+                            f"Photo delete error "
+                            f"{ad_id} / "
+                            f"{photo_message_id}: {e}"
+                        )
+
+                # =========================
+                # ARCHIVE TEXT
+                # =========================
+
                 text = (
                     f"🔒 <b>АРХИВНОЕ ОБЪЯВЛЕНИЕ</b>\n\n"
                     f"🧿 <b>{row[1]}</b>\n"
@@ -992,35 +1044,81 @@ async def archive_old_ads():
                     f"📩 Связаться с администратором"
                 )
 
-                kb = InlineKeyboardMarkup(inline_keyboard=[
-                    [InlineKeyboardButton(
-                        text="📩 Написать администратору",
-                        url=f"https://t.me/{ADMIN_USERNAME}"
-                    )]
-                ])
+                kb = InlineKeyboardMarkup(
+                    inline_keyboard=[
+                        [
+                            InlineKeyboardButton(
+                                text="📩 Написать администратору",
+                                url=f"https://t.me/{ADMIN_USERNAME}"
+                            )
+                        ]
+                    ]
+                )
 
-                await bot.edit_message_text(
-                    chat_id=CHANNEL_ID,
-                    message_id=row[6],
-                    text=text,
+                # =========================
+                # SEND ARCHIVE MESSAGE
+                # =========================
+
+                archived_message = await bot.send_message(
+                    CHANNEL_ID,
+                    text,
                     reply_markup=kb,
                     parse_mode="HTML"
                 )
 
+                # =========================
+                # DELETE OLD MAIN MESSAGE
+                # =========================
+
+                try:
+                    await bot.delete_message(
+                        chat_id=CHANNEL_ID,
+                        message_id=main_message_id
+                    )
+
+                except Exception as e:
+                    print(
+                        f"Main message delete error "
+                        f"{ad_id}: {e}"
+                    )
+
+                # =========================
+                # UPDATE DATABASE
+                # =========================
+
                 cursor.execute("""
                 UPDATE ads
-                SET archived = 1
+                SET archived = 1,
+                    channel_message_id = ?
                 WHERE id = ?
+                """, (
+                    archived_message.message_id,
+                    ad_id
+                ))
+
+                # Удаляем записи фотографий
+                cursor.execute("""
+                DELETE FROM photos
+                WHERE ad_id = ?
                 """, (ad_id,))
 
                 conn.commit()
 
+                print(
+                    f"ARCHIVED {ad_id}"
+                )
+
             except Exception as e:
-                print(f"Archive error {ad_id}: {e}")
+
+                print(
+                    f"Archive error {ad_id}: {e}"
+                )
 
         conn.close()
 
         await asyncio.sleep(3600)
+
+
         
 async def main():
     print("БОТ СТАРТОВАЛ")

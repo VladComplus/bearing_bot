@@ -552,7 +552,6 @@ async def get_phone(message: Message, state: FSMContext):
     await message.answer("Доп. информация (до 250 символов):", reply_markup=skip_kb)
     await state.set_state(Form.desc)
 
-
 @dp.message(Form.desc)
 async def get_desc(message: Message, state: FSMContext):
 
@@ -581,15 +580,12 @@ async def get_desc(message: Message, state: FSMContext):
 
     await state.set_state(Form.photos)
 
-    await message.answer(
-        "📷 Загрузите до 4 фотографий.\n\n"
-        "Можно отправлять фотографии по одной.\n"
-        "После загрузки нажмите «✅ Готово».\n"
-        "Если фотографии не нужны — нажмите «⏭ Пропустить».",
-        reply_markup=photo_kb
-    )
 
-    await state.set_state(Form.photos)
+# =========================
+# PHOTOS
+# =========================
+
+
 
     ad_id = generate_id()
 

@@ -569,8 +569,17 @@ async def get_desc(message: Message, state: FSMContext):
         await message.answer("❌ Ошибка ввод")
         return
 
-    data = await state.get_data()
     await state.update_data(desc=desc, photos=[])
+
+    await message.answer(
+        "📷 Загрузите до 4 фотографий.\n\n"
+        "Можно отправлять фотографии по одной.\n"
+        "После загрузки нажмите «✅ Готово».\n"
+        "Если фотографии не нужны — нажмите «⏭ Пропустить».",
+        reply_markup=photo_kb
+    )
+
+    await state.set_state(Form.photos)
 
     ad_id = generate_id()
 

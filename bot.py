@@ -980,8 +980,6 @@ async def reject_ad(callback: CallbackQuery):
 # ПАНЕЛЬ ДОСКИ
 # =========================
 
-
-
 @dp.message(Command("board"))
 async def create_board_panel(message: Message):
 
@@ -989,23 +987,25 @@ async def create_board_panel(message: Message):
         await message.answer("⛔ Доступ запрещен")
         return
 
+    board_kb = InlineKeyboardMarkup(
+        inline_keyboard=[
+            [
+                InlineKeyboardButton(
+                    text="➕ Подать объявление",
+                    url="https://t.me/iBearingBot?start=add"
+                ),
+                InlineKeyboardButton(
+                    text="📩 Связь с администратором",
+                    url=f"https://t.me/{ADMIN_USERNAME}"
+                )
+            ]
+        ]
+    )
+
     board_message = await bot.send_message(
         CHANNEL_ID,
-        "📌 <b>Действия на доске</b>",
-        reply_markup=InlineKeyboardMarkup(
-            inline_keyboard=[
-                [
-                    InlineKeyboardButton(
-                        text="➕ Подать объявление",
-                        url="https://t.me/iBearingBot?start=add"
-                    ),
-                    InlineKeyboardButton(
-                        text="📩 Связь с администратором",
-                        url=f"https://t.me/{ADMIN_USERNAME}"
-                    )
-                ]
-            ]
-        ),
+        "📢 <b>Доска объявлений</b>",
+        reply_markup=board_kb,
         parse_mode="HTML"
     )
 

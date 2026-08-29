@@ -1004,9 +1004,8 @@ async def create_board_panel(message: Message):
 
     board_message = await bot.send_message(
         CHANNEL_ID,
-        "📢 <b>Доска объявлений</b>",
-        reply_markup=board_kb,
-        parse_mode="HTML"
+        "👇",
+        reply_markup=board_kb
     )
 
     await bot.pin_chat_message(
@@ -1015,6 +1014,7 @@ async def create_board_panel(message: Message):
     )
 
     await message.answer("✅ Панель доски создана и закреплена.")
+
 
 # =========================
 # RUN

@@ -415,7 +415,25 @@ photo_kb = ReplyKeyboardMarkup(
 @dp.message(Command("start"))
 async def start(message: Message, state: FSMContext):
     await state.clear()
-    await message.answer("Выбери действие:", reply_markup=main_kb)
+
+    board_kb = InlineKeyboardMarkup(inline_keyboard=[
+        [
+            InlineKeyboardButton(
+                text="📢 Доска объявлений о продаже/покупке подшипников",
+                url="https://t.me/bearings_board"
+            )
+        ]
+    ])
+
+    await message.answer(
+        "Выбери действие:",
+        reply_markup=main_kb
+    )
+
+    await message.answer(
+        "📢 Доска объявлений о продаже/покупке подшипников",
+        reply_markup=board_kb
+    )
 
 @dp.message(Command("testdb"))
 async def test_db(message: Message):

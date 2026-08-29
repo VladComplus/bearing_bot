@@ -429,24 +429,7 @@ async def test_db(message: Message):
 
     await message.answer(f"В базе объявлений: {count}")
 
-@dp.message(F.text == "📢 Доска объявлений")
-async def open_board(message: Message):
 
-    kb = InlineKeyboardMarkup(inline_keyboard=[
-        [
-            InlineKeyboardButton(
-                text="📢 Открыть доску",
-                url="https://t.me/bearings_board"
-            )
-        ]
-    ])
-
-    await message.answer(
-        "📢 <b>Доска объявлений</b>\n\n"
-        "Здесь опубликованы актуальные объявления.",
-        reply_markup=kb,
-        parse_mode="HTML"
-    )
 
 # =========================
 # FLOW

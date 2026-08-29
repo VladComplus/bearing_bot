@@ -976,6 +976,45 @@ async def reject_ad(callback: CallbackQuery):
     await callback.message.edit_text("❌ Отклонено")
     await callback.answer()
 
+# =========================
+# ПАНЕЛЬ ДОСКИ
+# =========================
+
+
+
+@dp.message(Command("board"))
+async def create_board_panel(message: Message):
+
+    if message.from_user.id != ADMIN_ID:
+        await message.answer("⛔ Доступ запрещен")
+        return
+
+    board_message = await bot.send_message(
+        CHANNEL_ID,
+        "📌 <b>Действия на доске</b>",
+        reply_markup=InlineKeyboardMarkup(
+            inline_keyboard=[
+                [
+                    InlineKeyboardButton(
+                        text="➕ Подать объявление",
+                        url="https://t.me/iBearingBot?start=add"
+                    ),
+                    InlineKeyboardButton(
+                        text="📩 Связь с администратором",
+                        url=f"https://t.me/{ADMIN_USERNAME}"
+                    )
+                ]
+            ]
+        ),
+        parse_mode="HTML"
+    )
+
+    await bot.pin_chat_message(
+        chat_id=CHANNEL_ID,
+        message_id=board_message.message_id
+    )
+
+    await message.answer("✅ Панель доски создана и закреплена.")
 
 # =========================
 # RUN

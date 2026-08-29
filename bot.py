@@ -987,25 +987,17 @@ async def create_board_panel(message: Message):
         await message.answer("⛔ Доступ запрещен")
         return
 
-    board_kb = InlineKeyboardMarkup(
-        inline_keyboard=[
-            [
-                InlineKeyboardButton(
-                    text="➕ Подать объявление",
-                    url="https://t.me/iBearingBot?start=add"
-                ),
-                InlineKeyboardButton(
-                    text="📩 Связь с администратором",
-                    url=f"https://t.me/{ADMIN_USERNAME}"
-                )
-            ]
-        ]
+    board_text = (
+        '➕ <a href="https://t.me/iBearingBot?start=add">'
+        'Подать объявление</a>\n'
+        f'📩 <a href="https://t.me/{ADMIN_USERNAME}">'
+        'Связь с администратором</a>'
     )
 
     board_message = await bot.send_message(
         CHANNEL_ID,
-        "👇",
-        reply_markup=board_kb
+        board_text,
+        parse_mode="HTML"
     )
 
     await bot.pin_chat_message(
@@ -1014,7 +1006,6 @@ async def create_board_panel(message: Message):
     )
 
     await message.answer("✅ Панель доски создана и закреплена.")
-
 
 # =========================
 # RUN

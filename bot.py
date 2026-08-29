@@ -380,7 +380,8 @@ class Form(StatesGroup):
 main_kb = ReplyKeyboardMarkup(
     keyboard=[
         [KeyboardButton(text="📢 Продам"), KeyboardButton(text="💵 Куплю")],
-        [KeyboardButton(text="🔍 Поиск")]
+        [KeyboardButton(text="🔍 Поиск")],
+        [KeyboardButton(text="📢 Доска объявлений")]
     ],
     resize_keyboard=True
 )
@@ -427,6 +428,25 @@ async def test_db(message: Message):
     conn.close()
 
     await message.answer(f"В базе объявлений: {count}")
+
+@dp.message(F.text == "📢 Доска объявлений")
+async def open_board(message: Message):
+
+    kb = InlineKeyboardMarkup(inline_keyboard=[
+        [
+            InlineKeyboardButton(
+                text="📢 Открыть доску",
+                url="https://t.me/bearings_board"
+            )
+        ]
+    ])
+
+    await message.answer(
+        "📢 <b>Доска объявлений</b>\n\n"
+        "Здесь опубликованы актуальные объявления.",
+        reply_markup=kb,
+        parse_mode="HTML"
+    )
 
 # =========================
 # FLOW

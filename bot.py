@@ -380,8 +380,8 @@ class Form(StatesGroup):
 main_kb = ReplyKeyboardMarkup(
     keyboard=[
         [KeyboardButton(text="📢 Продам"), KeyboardButton(text="💵 Куплю")],
-        [KeyboardButton(text="🔍 Поиск")],
-        [KeyboardButton(text="📢 Доска объявлений")]
+        [KeyboardButton(text="🔍 Поиск")]
+        
     ],
     resize_keyboard=True
 )

@@ -380,7 +380,8 @@ class Form(StatesGroup):
 main_kb = ReplyKeyboardMarkup(
     keyboard=[
         [KeyboardButton(text="📢 Продам"), KeyboardButton(text="💵 Куплю")],
-        [KeyboardButton(text="🔍 Поиск")]
+        [KeyboardButton(text="🔍 Поиск")],
+        [KeyboardButton(text="📢 Доска объявлений")]
         
     ],
     resize_keyboard=True
@@ -415,25 +416,7 @@ photo_kb = ReplyKeyboardMarkup(
 @dp.message(Command("start"))
 async def start(message: Message, state: FSMContext):
     await state.clear()
-
-    board_kb = InlineKeyboardMarkup(inline_keyboard=[
-        [
-            InlineKeyboardButton(
-                text="📢 Доска объявлений о продаже/покупке подшипников",
-                url="https://t.me/bearings_board"
-            )
-        ]
-    ])
-
-    await message.answer(
-        "Выбери действие:",
-        reply_markup=main_kb
-    )
-
-    await message.answer(
-        "📢 Доска объявлений о продаже/покупке подшипников",
-        reply_markup=board_kb
-    )
+    await message.answer("Выбери действие:", reply_markup=main_kb)
 
 @dp.message(Command("testdb"))
 async def test_db(message: Message):
@@ -447,6 +430,22 @@ async def test_db(message: Message):
 
     await message.answer(f"В базе объявлений: {count}")
 
+@dp.message(F.text == "📢 Доска объявлений")
+async def open_board(message: Message):
+
+    kb = InlineKeyboardMarkup(inline_keyboard=[
+        [
+            InlineKeyboardButton(
+                text="📢 Открыть доску",
+                url="https://t.me/bearings_board"
+            )
+        ]
+    ])
+
+    await message.answer(
+        "📢 Доска объявлений о продаже/покупке подшипников",
+        reply_markup=kb
+    )
 
 
 # =========================

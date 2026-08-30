@@ -419,6 +419,8 @@ photo_kb = ReplyKeyboardMarkup(
     ],
     resize_keyboard=True
 )
+
+
 # =========================
 # START
 # =========================
@@ -438,19 +440,50 @@ async def publish_again(message: Message, state: FSMContext):
 @dp.message(F.text == "👀 Посмотреть своё объявление")
 async def view_my_ad(message: Message, state: FSMContext):
 
-    await state.clear()
+    data = await state.get_data()
+    ad_id = data.get("last_ad_id")
+
+    if not ad_id:
+        await message.answer(
+            "❌ Не удалось найти последнее объявление.",
+            reply_markup=main_kb
+        )
+        return
+
+    conn = sqlite3.connect("ads.db")
+    cursor = conn.cursor()
+
+    cursor.execute("""
+    SELECT channel_message_id
+    FROM ads
+    WHERE id = ? AND user_id = ?
+    """, (ad_id, message.from_user.id))
+
+    row = cursor.fetchone()
+    conn.close()
+
+    if not row or not row[0]:
+        await message.answer(
+            "❌ Не удалось найти опубликованное объявление.",
+            reply_markup=main_kb
+        )
+        return
+
+    channel_message_id = row[0]
+
+    ad_url = f"https://t.me/bearings_board/{channel_message_id}"
 
     kb = InlineKeyboardMarkup(inline_keyboard=[
         [
             InlineKeyboardButton(
-                text="📢 Открыть доску",
-                url="https://t.me/bearings_board"
+                text="👀 Открыть своё объявление",
+                url=ad_url
             )
         ]
     ])
 
     await message.answer(
-        "📢 Доска объявлений о продаже/покупке подшипников",
+        "👀 Ваше объявление опубликовано на доске:",
         reply_markup=kb
     )
 

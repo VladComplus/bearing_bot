@@ -387,6 +387,16 @@ main_kb = ReplyKeyboardMarkup(
     resize_keyboard=True
 )
 
+published_kb = ReplyKeyboardMarkup(
+    keyboard=[
+        [
+            KeyboardButton(text="📢 Опубликовать ещё"),
+            KeyboardButton(text="👀 Посмотреть своё объявление")
+        ]
+    ],
+    resize_keyboard=True
+)
+
 condition_kb = ReplyKeyboardMarkup(
     keyboard=[[KeyboardButton(text="🆕 Новый"), KeyboardButton(text="♻️ Б/У")]],
     resize_keyboard=True
@@ -418,6 +428,33 @@ async def start(message: Message, state: FSMContext):
     await state.clear()
     await message.answer("Выбери действие:", reply_markup=main_kb)
 
+
+@dp.message(F.text == "📢 Опубликовать ещё")
+async def publish_again(message: Message, state: FSMContext):
+    await state.clear()
+    await message.answer("Выбери действие:", reply_markup=main_kb)
+
+
+@dp.message(F.text == "👀 Посмотреть своё объявление")
+async def view_my_ad(message: Message, state: FSMContext):
+
+    await state.clear()
+
+    kb = InlineKeyboardMarkup(inline_keyboard=[
+        [
+            InlineKeyboardButton(
+                text="📢 Открыть доску",
+                url="https://t.me/bearings_board"
+            )
+        ]
+    ])
+
+    await message.answer(
+        "📢 Доска объявлений о продаже/покупке подшипников",
+        reply_markup=kb
+    )
+
+
 @dp.message(Command("testdb"))
 async def test_db(message: Message):
     conn = sqlite3.connect("ads.db")
@@ -429,6 +466,7 @@ async def test_db(message: Message):
     conn.close()
 
     await message.answer(f"В базе объявлений: {count}")
+
 
 @dp.message(F.text == "📢 Доска объявлений")
 async def open_board(message: Message):
@@ -733,6 +771,7 @@ async def publish_ad(message: Message, state: FSMContext):
     photos = data.get("photos", [])
 
     ad_id = generate_id()
+    await state.update_data(last_ad_id=ad_id)
 
     now_dt = datetime.now(ZoneInfo("Europe/Kyiv"))
     now = now_dt.strftime('%d.%m.%Y %H:%M')
@@ -873,10 +912,10 @@ async def publish_ad(message: Message, state: FSMContext):
 
     await message.answer(
         "✅ Опубликовано",
-        reply_markup=main_kb
+        reply_markup=published_kb
     )
 
-    await state.clear()
+    await state.clear(exclude={"last_ad_id"})
 
 
 

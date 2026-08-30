@@ -1,4 +1,4 @@
-# FINAL VERSION V5 (fixed stop-words bug completely)
+# FINAL VERSION V6.3 (fixed stop-words bug completely)
 
 import asyncio
 import logging
@@ -526,7 +526,7 @@ async def open_board(message: Message):
 @dp.message(F.text.in_(["📢 Продам", "💵 Куплю"]))
 async def choose_type(message: Message, state: FSMContext):
     await state.update_data(type=message.text)
-    await message.answer("Введите наименование:")
+    await message.answer("Введите наименование подшипника:")
     await state.set_state(Form.name)
     
 @dp.message(F.text == "🔍 Поиск")

@@ -719,9 +719,9 @@ async def get_desc(message: Message, state: FSMContext):
     if desc:
         lines = [line for line in desc.splitlines() if line.strip()]
 
-        if len(lines) > 15:
+        if len(lines) > 8:
             await message.answer(
-                "❌ Слишком много строк (более 15 ст.), уменьшите количество строк и повторите ввод"
+                "❌ Слишком много строк (более 8 ст.), уменьшите количество строк и повторите ввод"
             )
             return
 

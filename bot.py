@@ -711,8 +711,19 @@ async def get_desc(message: Message, state: FSMContext):
         desc = message.text.strip()
 
     if desc and len(desc) > 250:
-        await message.answer("❌ Слишком длинный текст (более 250 симв.), сократите текст и повторите ввод")
+        await message.answer(
+            "❌ Слишком длинный текст (более 250 симв.), сократите текст и повторите ввод"
+        )
         return
+
+    if desc:
+        lines = [line for line in desc.splitlines() if line.strip()]
+
+        if len(lines) > 15:
+            await message.answer(
+                "❌ Слишком много строк (более 15 ст.), уменьшите количество строк и повторите ввод"
+            )
+            return
 
     if desc and contains_stop_word(desc):
         await message.answer("❌ Ошибка ввод")

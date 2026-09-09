@@ -657,11 +657,17 @@ async def get_name(message: Message, state: FSMContext):
 async def get_qty(message: Message, state: FSMContext):
     text = message.text.strip()
 
-    if not text.isdigit() or len(text) > 6:
+    if not text.isdigit():
         await message.answer(
-            "❌ Ошибка ввода, вводить только цифры. Повторите ввод"
-        )
-        return
+        "❌ Ошибка ввода, вводить только цифры. Повторите ввод"
+    )
+    return
+
+    if len(text) > 6:
+        await message.answer(
+        "❌ Ошибка ввода, не более 6 цифр. Повторите ввод"
+    )
+    return
 
     await state.update_data(quantity=text)
     await message.answer("Состояние:", reply_markup=condition_kb)
@@ -685,9 +691,14 @@ async def get_price(message: Message, state: FSMContext):
 
     if text == "💰 Договорная":
         price = "договорная"
-    elif not text.isdigit() or len(text) > 8:
+    elif not text.isdigit():
         await message.answer(
             "❌ Ошибка ввода, вводить только цифры. Повторите ввод"
+        )
+        return
+    elif len(text) > 8:
+        await message.answer(
+            "❌ Ошибка ввода, не более 8 цифр. Повторите ввод"
         )
         return
     else:

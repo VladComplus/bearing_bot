@@ -660,14 +660,14 @@ async def get_qty(message: Message, state: FSMContext):
     if not text.isdigit():
         await message.answer(
         "❌ Ошибка ввода, вводить только цифры. Повторите ввод"
-    )
-    return
+        )
+        return
 
     if len(text) > 6:
         await message.answer(
         "❌ Ошибка ввода, не более 6 цифр. Повторите ввод"
-    )
-    return
+        )
+        return
 
     await state.update_data(quantity=text)
     await message.answer("Состояние:", reply_markup=condition_kb)

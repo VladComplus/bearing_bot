@@ -959,18 +959,25 @@ async def publish_ad(message: Message, state: FSMContext):
 
     cursor.execute("""
     INSERT INTO ads (
-        id, type, name, manufacturer, quantity, condition, price,
-        phone, desc, user_id, created_at, expires_at, archived
+        id, type, name, manufacturer,
+        original_name, original_manufacturer,
+        quantity, condition, price, original_price,
+        phone, original_phone, desc,
+        user_id, created_at, expires_at, archived
     )
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0)
     """, (
         ad_id,
         data['type'],
         data['name'],
         data['manufacturer'],
+        data['name'],
+        data['manufacturer'],
         data['quantity'],
         data['condition'],
         data['price'],
+        data['price'],
+        data['phone'],
         data['phone'],
         data['desc'],
         message.from_user.id,

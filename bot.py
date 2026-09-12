@@ -1,4 +1,4 @@
-# FINAL VERSION V6.3 (fixed stop-words bug completely)
+# FINAL VERSION V6.4 (add manufacturer)
 
 import asyncio
 import logging
@@ -205,6 +205,7 @@ def init_db():
         id TEXT PRIMARY KEY,
         type TEXT,
         name TEXT,
+        manufacturer TEXT,
         quantity TEXT,
         condition TEXT,
         price TEXT,
@@ -218,7 +219,19 @@ def init_db():
     )
     """)
 
-       
+    # Добавляем manufacturer,
+    # если колонка ещё отсутствует
+    cursor.execute("PRAGMA table_info(ads)")
+    columns = [row[1] for row in cursor.fetchall()]
+
+    if "manufacturer" not in columns:
+        cursor.execute("""
+        ALTER TABLE ads
+        ADD COLUMN manufacturer TEXT
+        """)
+
+
+    
     cursor.execute("""
     CREATE TABLE IF NOT EXISTS photos (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -257,6 +270,20 @@ def load_db_names():
         return []
 
 DB_NAMES = load_db_names()
+
+# =========================
+# MANUFACTURERS
+# =========================
+
+def load_manufacturers():
+    try:
+        with open("manufacturer01.txt", "r", encoding="utf-8") as f:
+            return [line.strip() for line in f if line.strip()]
+    except:
+        return []
+
+MANUFACTURERS = load_manufacturers()
+
 
 # =========================
 # STOP WORDS (V6 HARD FILTER)
@@ -365,6 +392,7 @@ def generate_id():
 class Form(StatesGroup):
     type = State()
     name = State()
+    manufacturer = State()
     quantity = State()
     condition = State()
     price = State()
@@ -634,6 +662,12 @@ async def search_ads(message: Message, state: FSMContext):
 @dp.message(Form.name)
 async def get_name(message: Message, state: FSMContext):
     name = message.text.strip()
+    if len(name) > 24:
+        await message.answer(
+            "❌ Слишком длинное наименование (более 24 символов). "
+            "Сократите наименование и повторите ввод."
+        )
+        return
 
     if not has_min_two_digits(name):
         await message.answer("❌ Ошибка ввод")
@@ -649,6 +683,42 @@ async def get_name(message: Message, state: FSMContext):
         await state.update_data(moderation=True)
     else:
         await state.update_data(moderation=False)
+
+    await message.answer("Введите наименование производителя:")
+    await state.set_state(Form.manufacturer)
+
+@dp.message(Form.manufacturer)
+async def get_manufacturer(message: Message, state: FSMContext):
+    manufacturer = message.text.strip()
+
+    if not manufacturer:
+        await message.answer("❌ Ошибка ввода. Повторите ввод.")
+        return
+
+    # Ищем точное совпадение без учёта регистра
+    found = None
+
+    for item in MANUFACTURERS:
+        if item.lower() == manufacturer.lower():
+            found = item
+            break
+
+    if not found:
+        if contains_stop_word(manufacturer):
+            await message.answer(
+                "❌ Ошибка ввода. Повторите ввод."
+            )
+            return
+
+        await state.update_data(
+            manufacturer=manufacturer,
+            manufacturer_new=True
+        )
+    else:
+        await state.update_data(
+            manufacturer=found,
+            manufacturer_new=False
+        )
 
     await message.answer("Количество:")
     await state.set_state(Form.quantity)
@@ -844,6 +914,7 @@ async def publish_ad(message: Message, state: FSMContext):
     text = (
         f"{type_text}\n\n"
         f"🧿 <b>{data['name']}</b>\n"
+        f"🏭 Производитель: {data['manufacturer']}\n"
         f"🔢 Кол-во: {data['quantity']}\n"
         f"⚙️ Состояние: {condition}\n"
         f"💰 Цена: {data['price']}\n"
@@ -861,14 +932,15 @@ async def publish_ad(message: Message, state: FSMContext):
 
     cursor.execute("""
     INSERT INTO ads (
-        id, type, name, quantity, condition, price,
+        id, type, name, manufacturer, quantity, condition, price,
         phone, desc, user_id, created_at, expires_at, archived
     )
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0)
     """, (
         ad_id,
         data['type'],
         data['name'],
+        data['manufacturer'],
         data['quantity'],
         data['condition'],
         data['price'],
@@ -970,11 +1042,23 @@ async def publish_ad(message: Message, state: FSMContext):
     conn.commit()
     conn.close()
 
+    data = await state.get_data()
+
+    if data.get("manufacturer_new", False):
+        await bot.send_message(
+        ADMIN_ID,
+        f"⚠️ <b>Новый производитель</b>\n\n"
+        f"🏭 Производитель: {data['manufacturer']}\n"
+        f"🧿 Маркировка: {data['name']}\n"
+        f"🆔 Объявление: {ad_id}",
+        parse_mode="HTML"
+    )
+
     await message.answer(
         "✅ Опубликовано",
         reply_markup=published_kb
     )
-
+    
     await state.clear(exclude={"last_ad_id"})
 
 

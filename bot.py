@@ -71,7 +71,7 @@ async def db_view(message: Message):
     cursor = conn.cursor()
 
     cursor.execute("""
-    SELECT id, name, quantity, condition, price, phone, desc, archived, created_at, channel_message_id
+    SELECT id, name, manufacturer, quantity, condition, price, phone, desc, archived, created_at, channel_message_id
     FROM ads
     WHERE id = ?
     """, (ad_id,))
@@ -83,21 +83,24 @@ async def db_view(message: Message):
         await message.answer("❌ Объявление не найдено")
         return
 
-    status = "🔒 АРХИВ" if row[7] == 1 else "🟢 АКТИВ"
+    status = "🔒 АРХИВ" if row[8] == 1 else "🟢 АКТИВ"
 
-    desc_text = f"\n📖 {row[6]}" if row[6] else ""
+    desc_text = f"\n📖 {row[7]}" if row[7] else ""
 
     msg = (
         f"📦 <b>{row[1]}</b>\n"
-        f"🔢 Кол-во: {row[2]}\n"
-        f"⚙️ Состояние: {row[3]}\n"
-        f"💰 Цена: {row[4]}\n"
-        f"📞 {row[5]}\n"
+        f"🏭 Производитель: {row[2]}\n"
+        f"🔢 Кол-во: {row[3]}\n"
+        f"⚙️ Состояние: {row[4]}\n"
+        f"💰 Цена: {row[5]}\n"
+        f"📞 {row[6]}\n"
         f"{status}"
         f"{desc_text}\n\n"
         f"🆔 {row[0]}\n"
-        f"📨 MSG_ID: {row[9]}"
+        f"📨 MSG_ID: {row[10]}"
     )
+    
+    
 
     await message.answer(msg)
 

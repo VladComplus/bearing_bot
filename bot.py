@@ -232,6 +232,30 @@ def init_db():
         ALTER TABLE ads
         ADD COLUMN manufacturer TEXT
         """)
+        
+    if "original_name" not in columns:
+        cursor.execute("""
+        ALTER TABLE ads
+        ADD COLUMN original_name TEXT
+        """)
+
+    if "original_manufacturer" not in columns:
+        cursor.execute("""
+        ALTER TABLE ads
+        ADD COLUMN original_manufacturer TEXT
+        """)
+
+    if "original_price" not in columns:
+        cursor.execute("""
+        ALTER TABLE ads
+        ADD COLUMN original_price TEXT
+        """)
+
+    if "original_phone" not in columns:
+        cursor.execute("""
+        ALTER TABLE ads
+        ADD COLUMN original_phone TEXT
+        """)
 
 
     

@@ -71,9 +71,13 @@ async def db_view(message: Message):
     cursor = conn.cursor()
 
     cursor.execute("""
-    SELECT id, name, manufacturer, quantity, condition, price, phone, desc, archived, created_at, channel_message_id
-    FROM ads
-    WHERE id = ?
+    SELECT id, name, manufacturer,
+       original_name, original_manufacturer,
+       quantity, condition,
+       price, original_price,
+       phone, original_phone,
+       desc, archived, created_at, channel_message_id
+    FROM ads WHERE id = ?
     """, (ad_id,))
 
     row = cursor.fetchone()

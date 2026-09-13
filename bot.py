@@ -73,10 +73,12 @@ async def db_view(message: Message):
     cursor.execute("""
     SELECT id, name, manufacturer,
            original_name, original_manufacturer,
-           quantity, condition,
+           quantity, original_quantity,
+           condition, original_condition,
            price, original_price,
            phone, original_phone,
-           desc, archived, created_at, channel_message_id
+           desc, original_desc,
+           archived, created_at, channel_message_id
     FROM ads
     WHERE id = ?
     """, (ad_id,))
@@ -88,27 +90,45 @@ async def db_view(message: Message):
         await message.answer("❌ Объявление не найдено")
         return
 
-    status = "🔒 АРХИВ" if row[12] == 1 else "🟢 АКТИВ"
+    status = "🔒 АРХИВ" if row[15] == 1 else "🟢 АКТИВ"
 
-    desc_text = f"\n📖 {row[11]}" if row[11] else ""
+    current_desc = row[13] if row[13] else "—"
+
+    original_name = row[3] if row[3] else "—"
+    original_manufacturer = row[4] if row[4] else "—"
+    original_quantity = row[6] if row[6] else "—"
+    original_condition = row[8] if row[8] else "—"
+    original_price = row[10] if row[10] else "—"
+    original_phone = row[12] if row[12] else "—"
+    original_desc = row[14] if row[14] else "—"
 
     msg = (
         f"📦 <b>{row[1]}</b>\n"
-        f"📝 Исходная маркировка: {row[3]}\n"
         f"🏭 Производитель: {row[2]}\n"
         f"🔢 Кол-во: {row[5]}\n"
-        f"⚙️ Состояние: {row[6]}\n"
-        f"💰 Цена: {row[7]}\n"
-        f"📞 {row[9]}\n"
-        f"{status}"
-        f"{desc_text}\n\n"
-        f"🆔 {row[0]}\n"
-        f"📨 MSG_ID: {row[14]}"
-    )
-    
-    
+        f"⚙️ Состояние: {row[7]}\n"
+        f"💰 Цена: {row[9]}\n"
+        f"📞 {row[11]}\n"
+        f"{status}\n"
+        f"📖 {current_desc}\n\n"
 
-    await message.answer(msg)
+        f"<b>ИСХОДНЫЕ ДАННЫЕ</b>\n"
+        f"🧿 Маркировка: {original_name}\n"
+        f"🏭 Производитель: {original_manufacturer}\n"
+        f"🔢 Количество: {original_quantity}\n"
+        f"⚙️ Состояние: {original_condition}\n"
+        f"💰 Цена: {original_price}\n"
+        f"📞 Телефон: {original_phone}\n"
+        f"📖 Описание: {original_desc}\n\n"
+
+        f"🆔 {row[0]}\n"
+        f"📨 MSG_ID: {row[17]}"
+    )
+
+    await message.answer(
+        msg,
+        parse_mode="HTML"
+    )
 
 
 

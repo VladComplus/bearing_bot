@@ -94,6 +94,7 @@ async def db_view(message: Message):
 
     msg = (
         f"📦 <b>{row[1]}</b>\n"
+        f"📝 Исходная маркировка: {row[3]}\n"
         f"🏭 Производитель: {row[2]}\n"
         f"🔢 Кол-во: {row[5]}\n"
         f"⚙️ Состояние: {row[6]}\n"

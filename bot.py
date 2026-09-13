@@ -601,6 +601,7 @@ async def edit_name_start(callback: CallbackQuery, state: FSMContext):
         await callback.answer("⛔ Доступ запрещен", show_alert=True)
         return
 
+    await state.update_data(edit_field="name")
     await state.set_state(Form.edit_value)
 
     await callback.message.answer(
@@ -620,6 +621,7 @@ async def edit_manufacturer_start(callback: CallbackQuery, state: FSMContext):
         await callback.answer("⛔ Доступ запрещен", show_alert=True)
         return
 
+    await state.update_data(edit_field="manufacturer")
     await state.set_state(Form.edit_value)
 
     await callback.message.answer(
@@ -647,6 +649,7 @@ async def edit_name_save(message: Message, state: FSMContext):
 
     data = await state.get_data()
     ad_id = data.get("edit_ad_id")
+    edit_field = data.get("edit_field")
 
     if not ad_id:
         await message.answer("❌ ID объявления не найден.")

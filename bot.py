@@ -610,6 +610,25 @@ async def edit_name_start(callback: CallbackQuery, state: FSMContext):
     await callback.answer()
 
 # =========================
+# ADMIN EDIT — ПРОИЗВОДИТЕЛЬ
+# =========================
+
+@dp.callback_query(F.data == "edit_manufacturer")
+async def edit_manufacturer_start(callback: CallbackQuery, state: FSMContext):
+
+    if callback.from_user.id != ADMIN_ID:
+        await callback.answer("⛔ Доступ запрещен", show_alert=True)
+        return
+
+    await state.set_state(Form.edit_value)
+
+    await callback.message.answer(
+        "🏭 Введите нового производителя:"
+    )
+
+    await callback.answer()
+
+# =========================
 # ADMIN EDIT — СОХРАНЕНИЕ МАРКИРОВКИ
 # =========================
 

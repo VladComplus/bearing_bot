@@ -875,6 +875,26 @@ async def edit_price_start(callback: CallbackQuery, state: FSMContext):
     await callback.answer()
 
 # =========================
+# ADMIN EDIT — ТЕЛЕФОН
+# =========================
+
+@dp.callback_query(F.data == "edit_phone")
+async def edit_phone_start(callback: CallbackQuery, state: FSMContext):
+
+    if callback.from_user.id != ADMIN_ID:
+        await callback.answer("⛔ Доступ запрещен", show_alert=True)
+        return
+
+    await state.update_data(edit_field="phone")
+    await state.set_state(Form.edit_value)
+
+    await callback.message.answer(
+        "📞 Введите новый телефон:"
+    )
+
+    await callback.answer()
+
+# =========================
 # ADMIN EDIT — СОХРАНЕНИЕ ПОЛЕЙ
 # =========================
 
@@ -894,7 +914,7 @@ async def edit_field_save(message: Message, state: FSMContext):
         await state.clear()
         return
 
-    if edit_field not in ("name", "manufacturer", "quantity", "price"):
+    if edit_field not in ("name", "manufacturer", "quantity", "price", "phone"):
         await message.answer("❌ Ошибка выбора поля.")
         await state.set_state(Form.edit_field)
         return
@@ -1037,6 +1057,26 @@ async def edit_field_save(message: Message, state: FSMContext):
         success_text = (
             f"✅ Цена изменена на:\n"
             f"💰 <b>{new_price}</b>"
+        )
+
+    elif edit_field == "phone":
+
+        new_phone = new_value
+
+        cursor.execute("""
+        UPDATE ads
+        SET phone = ?
+        WHERE id = ?
+        """, (new_phone, ad_id))
+
+        display_name = row[1]
+        display_manufacturer = row[2]
+        display_quantity = row[3]
+        display_price = row[5]
+
+        success_text = (
+            f"✅ Телефон изменён на:\n"
+            f"📞 <b>{new_phone}</b>"
         )
 
     conn.commit()

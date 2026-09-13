@@ -1061,7 +1061,7 @@ async def edit_field_save(message: Message, state: FSMContext):
             f"💰 <b>{new_price}</b>"
         )
 
-elif edit_field == "phone":
+        elif edit_field == "phone":
 
         new_phone = new_value
 

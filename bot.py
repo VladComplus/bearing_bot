@@ -1660,7 +1660,14 @@ async def publish_ad(message: Message, state: FSMContext):
         reply_markup=published_kb
     )
     
-    await state.clear(exclude={"last_ad_id"})
+    data = await state.get_data()
+    last_ad_id = data.get("last_ad_id")
+
+    await state.clear()
+
+    if last_ad_id:
+        await state.update_data(last_ad_id=last_ad_id)
+    
 
 
 

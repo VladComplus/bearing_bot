@@ -953,6 +953,8 @@ async def edit_field_save(message: Message, state: FSMContext):
 
     # Определяем, какое поле меняем
 
+    display_phone = row[6]
+
     if edit_field == "name":
 
         cursor.execute("""
@@ -1059,7 +1061,7 @@ async def edit_field_save(message: Message, state: FSMContext):
             f"💰 <b>{new_price}</b>"
         )
 
-    elif edit_field == "phone":
+elif edit_field == "phone":
 
         new_phone = new_value
 
@@ -1073,6 +1075,7 @@ async def edit_field_save(message: Message, state: FSMContext):
         display_manufacturer = row[2]
         display_quantity = row[3]
         display_price = row[5]
+        display_phone = new_phone
 
         success_text = (
             f"✅ Телефон изменён на:\n"
@@ -1117,7 +1120,7 @@ async def edit_field_save(message: Message, state: FSMContext):
         f"🔢 Кол-во: {display_quantity}\n"
         f"⚙️ Состояние: {condition}\n"
         f"💰 Цена: {display_price}\n"
-        f"📞 {row[6]}"
+        f"📞 {display_phone}"
         f"{desc_text}\n\n"
         f"🕒 {created_text}        {ad_id}"
     )

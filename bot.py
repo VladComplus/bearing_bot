@@ -639,7 +639,8 @@ async def edit_name_save(message: Message, state: FSMContext):
     cursor.execute("""
     SELECT type, name, manufacturer,
            quantity, condition, price,
-           phone, desc, channel_message_id
+           phone, desc, created_at,
+           channel_message_id, archived
     FROM ads
     WHERE id = ?
     """, (ad_id,))
@@ -652,7 +653,13 @@ async def edit_name_save(message: Message, state: FSMContext):
         await state.clear()
         return
 
-    # Меняем только маркировку.
+    if row[10] == 1:
+        conn.close()
+        await message.answer("❌ Архивное объявление редактировать нельзя.")
+        await state.clear()
+        return
+
+    # Меняем только текущее значение.
     # original_name НЕ изменяем.
     cursor.execute("""
     UPDATE ads
@@ -661,7 +668,71 @@ async def edit_name_save(message: Message, state: FSMContext):
     """, (new_name, ad_id))
 
     conn.commit()
+
+    # Проверяем наличие фотографий
+    cursor.execute("""
+    SELECT COUNT(*)
+    FROM photos
+    WHERE ad_id = ?
+    """, (ad_id,))
+
+    photo_count = cursor.fetchone()[0]
+
     conn.close()
+
+    # Формируем обновленный текст объявления
+    condition = (
+        row[4]
+        .replace("🆕 ", "")
+        .replace("♻️ ", "")
+        .lower()
+    )
+
+    type_text = (
+        "📢 <b>ПРОДАМ</b>"
+        if "Продам" in row[0]
+        else "💵 <b>КУПЛЮ</b>"
+    )
+
+    desc_text = (
+        f"\n📖 Доп. информация: {row[7]}"
+        if row[7]
+        else ""
+    )
+
+    created_dt = datetime.fromisoformat(row[8])
+    created_text = created_dt.strftime("%d.%m.%Y %H:%M")
+
+    text = (
+        f"{type_text}\n\n"
+        f"🧿 <b>{new_name}</b>\n"
+        f"🏭 Производитель: {row[2]}\n"
+        f"🔢 Кол-во: {row[3]}\n"
+        f"⚙️ Состояние: {condition}\n"
+        f"💰 Цена: {row[5]}\n"
+        f"📞 {row[6]}"
+        f"{desc_text}\n\n"
+        f"🕒 {created_text}        {ad_id}"
+    )
+
+    # Обновляем объявление в канале
+    if photo_count > 0:
+
+        await bot.edit_message_caption(
+            chat_id=CHANNEL_ID,
+            message_id=row[9],
+            caption=text,
+            parse_mode="HTML"
+        )
+
+    else:
+
+        await bot.edit_message_text(
+            chat_id=CHANNEL_ID,
+            message_id=row[9],
+            text=text,
+            parse_mode="HTML"
+        )
 
     await message.answer(
         f"✅ Маркировка изменена на:\n"
@@ -669,8 +740,8 @@ async def edit_name_save(message: Message, state: FSMContext):
         parse_mode="HTML"
     )
 
-    await state.clear()
-
+    # Остаемся в режиме редактирования
+    await state.set_state(Form.edit_field)
 
 # =========================
 # UI

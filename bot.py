@@ -435,11 +435,75 @@ class Form(StatesGroup):
     desc = State()
     photos = State()
     search = State()
+
+    # ADMIN EDIT
     edit_ad_id = State()
+    edit_field = State()
+    edit_value = State()
+    edit_photos = State()
 
 # =========================
 # ADMIN EDIT — ПОИСК ПО ID
 # =========================
+
+# =========================
+# ADMIN EDIT — КЛАВИАТУРА
+# =========================
+
+def edit_ad_kb():
+    return InlineKeyboardMarkup(
+        inline_keyboard=[
+            [
+                InlineKeyboardButton(
+                    text="🧿 Маркировка",
+                    callback_data="edit_name"
+                ),
+                InlineKeyboardButton(
+                    text="🏭 Производитель",
+                    callback_data="edit_manufacturer"
+                )
+            ],
+            [
+                InlineKeyboardButton(
+                    text="🔢 Количество",
+                    callback_data="edit_quantity"
+                ),
+                InlineKeyboardButton(
+                    text="⚙️ Состояние",
+                    callback_data="edit_condition"
+                )
+            ],
+            [
+                InlineKeyboardButton(
+                    text="💰 Цена",
+                    callback_data="edit_price"
+                ),
+                InlineKeyboardButton(
+                    text="📞 Телефон",
+                    callback_data="edit_phone"
+                )
+            ],
+            [
+                InlineKeyboardButton(
+                    text="📖 Описание",
+                    callback_data="edit_desc"
+                )
+            ],
+            [
+                InlineKeyboardButton(
+                    text="📷 Заменить фото",
+                    callback_data="edit_photos"
+                )
+            ],
+            [
+                InlineKeyboardButton(
+                    text="❌ Отмена",
+                    callback_data="edit_cancel"
+                )
+            ]
+        ]
+    )
+
 
 @dp.message(Command("edit"))
 async def edit_start(message: Message, state: FSMContext):
@@ -450,7 +514,8 @@ async def edit_start(message: Message, state: FSMContext):
 
     await state.set_state(Form.edit_ad_id)
     await message.answer("Введите ID объявления:")
-    
+
+
 @dp.message(Form.edit_ad_id)
 async def edit_find_ad(message: Message, state: FSMContext):
 
@@ -464,12 +529,10 @@ async def edit_find_ad(message: Message, state: FSMContext):
     cursor = conn.cursor()
 
     cursor.execute("""
-    SELECT id, name, manufacturer,
-           original_name, original_manufacturer,
-           quantity, condition,
-           price, original_price,
-           phone, original_phone,
-           desc, archived, created_at, channel_message_id
+    SELECT id, type, name, manufacturer,
+           quantity, condition, price,
+           phone, desc, archived,
+           channel_message_id
     FROM ads
     WHERE id = ?
     """, (ad_id,))
@@ -484,26 +547,130 @@ async def edit_find_ad(message: Message, state: FSMContext):
         )
         return
 
-    status = "🔒 АРХИВ" if row[12] == 1 else "🟢 АКТИВ"
+    # Сохраняем ID объявления для дальнейшего редактирования
+    await state.update_data(edit_ad_id=ad_id)
 
-    desc_text = f"\n📖 {row[11]}" if row[11] else ""
+    # Получаем количество фотографий
+    conn = sqlite3.connect("ads.db")
+    cursor = conn.cursor()
+
+    cursor.execute("""
+    SELECT COUNT(*)
+    FROM photos
+    WHERE ad_id = ?
+    """, (ad_id,))
+
+    photo_count = cursor.fetchone()[0]
+    conn.close()
+
+    status = "🔒 АРХИВ" if row[9] == 1 else "🟢 АКТИВ"
+
+    desc_text = row[8] if row[8] else "—"
 
     msg = (
-        f"📦 <b>{row[1]}</b>\n"
-        f"🏭 Производитель: {row[2]}\n"
-        f"🔢 Кол-во: {row[5]}\n"
-        f"⚙️ Состояние: {row[6]}\n"
-        f"💰 Цена: {row[7]}\n"
-        f"📞 {row[9]}\n"
-        f"{status}"
-        f"{desc_text}\n\n"
+        f"✏️ <b>РЕДАКТИРОВАНИЕ</b>\n\n"
+        f"🧿 Маркировка: <b>{row[2]}</b>\n"
+        f"🏭 Производитель: {row[3]}\n"
+        f"🔢 Кол-во: {row[4]}\n"
+        f"⚙️ Состояние: {row[5]}\n"
+        f"💰 Цена: {row[6]}\n"
+        f"📞 Телефон: {row[7]}\n"
+        f"📖 Описание: {desc_text}\n"
+        f"📷 Фото: {photo_count} шт.\n\n"
         f"🆔 {row[0]}\n"
-        f"📨 MSG_ID: {row[14]}"
+        f"{status}"
     )
 
-    await message.answer(msg, parse_mode="HTML")
+    await message.answer(
+        msg,
+        parse_mode="HTML",
+        reply_markup=edit_ad_kb()
+    )
+
+    await state.set_state(Form.edit_field)
+
+# =========================
+# ADMIN EDIT — МАРКИРОВКА
+# =========================
+
+@dp.callback_query(F.data == "edit_name")
+async def edit_name_start(callback: CallbackQuery, state: FSMContext):
+
+    if callback.from_user.id != ADMIN_ID:
+        await callback.answer("⛔ Доступ запрещен", show_alert=True)
+        return
+
+    await state.set_state(Form.edit_value)
+
+    await callback.message.answer(
+        "🧿 Введите новую маркировку:"
+    )
+
+    await callback.answer()
+
+# =========================
+# ADMIN EDIT — СОХРАНЕНИЕ МАРКИРОВКИ
+# =========================
+
+@dp.message(Form.edit_value)
+async def edit_name_save(message: Message, state: FSMContext):
+
+    if message.from_user.id != ADMIN_ID:
+        await message.answer("⛔ Доступ запрещен")
+        return
+
+    new_name = message.text.strip()
+
+    if not new_name:
+        await message.answer("❌ Маркировка не может быть пустой.")
+        return
+
+    data = await state.get_data()
+    ad_id = data.get("edit_ad_id")
+
+    if not ad_id:
+        await message.answer("❌ ID объявления не найден.")
+        await state.clear()
+        return
+
+    conn = sqlite3.connect("ads.db")
+    cursor = conn.cursor()
+
+    cursor.execute("""
+    SELECT type, name, manufacturer,
+           quantity, condition, price,
+           phone, desc, channel_message_id
+    FROM ads
+    WHERE id = ?
+    """, (ad_id,))
+
+    row = cursor.fetchone()
+
+    if not row:
+        conn.close()
+        await message.answer("❌ Объявление не найдено.")
+        await state.clear()
+        return
+
+    # Меняем только маркировку.
+    # original_name НЕ изменяем.
+    cursor.execute("""
+    UPDATE ads
+    SET name = ?
+    WHERE id = ?
+    """, (new_name, ad_id))
+
+    conn.commit()
+    conn.close()
+
+    await message.answer(
+        f"✅ Маркировка изменена на:\n"
+        f"🧿 <b>{new_name}</b>",
+        parse_mode="HTML"
+    )
 
     await state.clear()
+
 
 # =========================
 # UI

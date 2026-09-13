@@ -109,73 +109,7 @@ async def db_view(message: Message):
 
     await message.answer(msg)
 
-# =========================
-# ADMIN EDIT — ПОИСК ПО ID
-# =========================
 
-@dp.message(Command("edit"))
-async def edit_start(message: Message, state: FSMContext):
-
-    if message.from_user.id != ADMIN_ID:
-        await message.answer("⛔ Доступ запрещен")
-        return
-
-    await state.set_state(Form.edit_ad_id)
-    await message.answer("Введите ID объявления:")
-    
-@dp.message(Form.edit_ad_id)
-async def edit_find_ad(message: Message, state: FSMContext):
-
-    if message.from_user.id != ADMIN_ID:
-        await message.answer("⛔ Доступ запрещен")
-        return
-
-    ad_id = message.text.strip()
-
-    conn = sqlite3.connect("ads.db")
-    cursor = conn.cursor()
-
-    cursor.execute("""
-    SELECT id, name, manufacturer,
-           original_name, original_manufacturer,
-           quantity, condition,
-           price, original_price,
-           phone, original_phone,
-           desc, archived, created_at, channel_message_id
-    FROM ads
-    WHERE id = ?
-    """, (ad_id,))
-
-    row = cursor.fetchone()
-    conn.close()
-
-    if not row:
-        await message.answer(
-            "❌ Объявление с таким ID не найдено.\n"
-            "Введите ID ещё раз:"
-        )
-        return
-
-    status = "🔒 АРХИВ" if row[12] == 1 else "🟢 АКТИВ"
-
-    desc_text = f"\n📖 {row[11]}" if row[11] else ""
-
-    msg = (
-        f"📦 <b>{row[1]}</b>\n"
-        f"🏭 Производитель: {row[2]}\n"
-        f"🔢 Кол-во: {row[5]}\n"
-        f"⚙️ Состояние: {row[6]}\n"
-        f"💰 Цена: {row[7]}\n"
-        f"📞 {row[9]}\n"
-        f"{status}"
-        f"{desc_text}\n\n"
-        f"🆔 {row[0]}\n"
-        f"📨 MSG_ID: {row[14]}"
-    )
-
-    await message.answer(msg, parse_mode="HTML")
-
-    await state.clear()
 
 
 # ===========Подлежит удалению после теста до conn.close==============
@@ -502,6 +436,74 @@ class Form(StatesGroup):
     photos = State()
     search = State()
     edit_ad_id = State()
+
+# =========================
+# ADMIN EDIT — ПОИСК ПО ID
+# =========================
+
+@dp.message(Command("edit"))
+async def edit_start(message: Message, state: FSMContext):
+
+    if message.from_user.id != ADMIN_ID:
+        await message.answer("⛔ Доступ запрещен")
+        return
+
+    await state.set_state(Form.edit_ad_id)
+    await message.answer("Введите ID объявления:")
+    
+@dp.message(Form.edit_ad_id)
+async def edit_find_ad(message: Message, state: FSMContext):
+
+    if message.from_user.id != ADMIN_ID:
+        await message.answer("⛔ Доступ запрещен")
+        return
+
+    ad_id = message.text.strip()
+
+    conn = sqlite3.connect("ads.db")
+    cursor = conn.cursor()
+
+    cursor.execute("""
+    SELECT id, name, manufacturer,
+           original_name, original_manufacturer,
+           quantity, condition,
+           price, original_price,
+           phone, original_phone,
+           desc, archived, created_at, channel_message_id
+    FROM ads
+    WHERE id = ?
+    """, (ad_id,))
+
+    row = cursor.fetchone()
+    conn.close()
+
+    if not row:
+        await message.answer(
+            "❌ Объявление с таким ID не найдено.\n"
+            "Введите ID ещё раз:"
+        )
+        return
+
+    status = "🔒 АРХИВ" if row[12] == 1 else "🟢 АКТИВ"
+
+    desc_text = f"\n📖 {row[11]}" if row[11] else ""
+
+    msg = (
+        f"📦 <b>{row[1]}</b>\n"
+        f"🏭 Производитель: {row[2]}\n"
+        f"🔢 Кол-во: {row[5]}\n"
+        f"⚙️ Состояние: {row[6]}\n"
+        f"💰 Цена: {row[7]}\n"
+        f"📞 {row[9]}\n"
+        f"{status}"
+        f"{desc_text}\n\n"
+        f"🆔 {row[0]}\n"
+        f"📨 MSG_ID: {row[14]}"
+    )
+
+    await message.answer(msg, parse_mode="HTML")
+
+    await state.clear()
 
 # =========================
 # UI

@@ -265,6 +265,24 @@ def init_db():
         ALTER TABLE ads
         ADD COLUMN original_phone TEXT
         """)
+    
+    if "original_quantity" not in columns:
+        cursor.execute("""
+        ALTER TABLE ads
+        ADD COLUMN original_quantity TEXT
+        """)
+
+    if "original_condition" not in columns:
+        cursor.execute("""
+        ALTER TABLE ads
+        ADD COLUMN original_condition TEXT
+        """)
+
+    if "original_desc" not in columns:
+        cursor.execute("""
+        ALTER TABLE ads
+        ADD COLUMN original_desc TEXT
+        """)
 
 
     
@@ -1328,25 +1346,38 @@ async def publish_ad(message: Message, state: FSMContext):
     INSERT INTO ads (
         id, type, name, manufacturer,
         original_name, original_manufacturer,
-        quantity, condition, price, original_price,
-        phone, original_phone, desc,
+        quantity, original_quantity,
+        condition, original_condition,
+        price, original_price,
+        phone, original_phone,
+        desc, original_desc,
         user_id, created_at, expires_at, archived
     )
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0)
     """, (
         ad_id,
         data['type'],
         data['name'],
         data['manufacturer'],
+
         data['name'],
         data['manufacturer'],
+
         data['quantity'],
+        data['quantity'],
+
         data['condition'],
+        data['condition'],
+
         data['price'],
         data['price'],
+
         data['phone'],
         data['phone'],
+
         data['desc'],
+        data['desc'],
+
         message.from_user.id,
         now_dt.strftime("%Y-%m-%d %H:%M:%S"),
         (now_dt + timedelta(days=90)).strftime("%Y-%m-%d %H:%M:%S")

@@ -895,6 +895,27 @@ async def edit_phone_start(callback: CallbackQuery, state: FSMContext):
     await callback.answer()
 
 # =========================
+# ADMIN EDIT — ОПИСАНИЕ
+# =========================
+
+@dp.callback_query(F.data == "edit_desc")
+async def edit_desc_start(callback: CallbackQuery, state: FSMContext):
+
+    if callback.from_user.id != ADMIN_ID:
+        await callback.answer("⛔ Доступ запрещен", show_alert=True)
+        return
+
+    await state.update_data(edit_field="desc")
+    await state.set_state(Form.edit_value)
+
+    await callback.message.answer(
+        "📖 Введите новое описание:"
+    )
+
+    await callback.answer()
+
+
+# =========================
 # ADMIN EDIT — СОХРАНЕНИЕ ПОЛЕЙ
 # =========================
 
@@ -914,7 +935,7 @@ async def edit_field_save(message: Message, state: FSMContext):
         await state.clear()
         return
 
-    if edit_field not in ("name", "manufacturer", "quantity", "price", "phone"):
+    if edit_field not in ("name", "manufacturer", "quantity", "price", "phone", "desc"):
         await message.answer("❌ Ошибка выбора поля.")
         await state.set_state(Form.edit_field)
         return
@@ -1081,6 +1102,26 @@ async def edit_field_save(message: Message, state: FSMContext):
             f"✅ Телефон изменён на:\n"
             f"📞 <b>{new_phone}</b>"
         )
+        
+    elif edit_field == "desc":
+
+        cursor.execute("""
+        UPDATE ads
+        SET desc = ?
+        WHERE id = ?
+        """, (new_value, ad_id))
+
+        display_name = row[1]
+        display_manufacturer = row[2]
+        display_quantity = row[3]
+        display_price = row[5]
+        display_phone = row[6]
+        display_desc = new_value
+
+        success_text = (
+            f"✅ Описание изменено на:\n"
+            f"📖 <b>{new_value}</b>"
+        )
 
     conn.commit()
 
@@ -1104,11 +1145,18 @@ async def edit_field_save(message: Message, state: FSMContext):
         else "💵 <b>КУПЛЮ</b>"
     )
 
-    desc_text = (
-        f"\n📖 Доп. информация: {row[7]}"
-        if row[7]
-        else ""
-    )
+    if edit_field == "desc":
+        desc_text = (
+            f"\n📖 Доп. информация: {new_value}"
+            if new_value
+            else ""
+        )
+    else:
+        desc_text = (
+            f"\n📖 Доп. информация: {row[7]}"
+            if row[7]
+            else ""
+        )
 
     created_dt = datetime.fromisoformat(row[8])
     created_text = created_dt.strftime("%d.%m.%Y %H:%M")

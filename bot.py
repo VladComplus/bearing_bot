@@ -811,12 +811,7 @@ async def edit_field_save(message: Message, state: FSMContext):
     conn.close()
 
     # Формируем обновленный текст объявления
-    condition = (
-        row[4]
-        .replace("🆕 ", "")
-        .replace("♻️ ", "")
-        .lower()
-    )
+    condition = row[4]
 
     type_text = (
         "📢 <b>ПРОДАМ</b>"

@@ -689,6 +689,172 @@ async def edit_quantity_start(callback: CallbackQuery, state: FSMContext):
     await callback.answer()
 
 # =========================
+# ADMIN EDIT — СОСТОЯНИЕ
+# =========================
+
+def edit_condition_kb():
+    return InlineKeyboardMarkup(
+        inline_keyboard=[
+            [
+                InlineKeyboardButton(
+                    text="🆕 Новый",
+                    callback_data="edit_condition_new"
+                ),
+                InlineKeyboardButton(
+                    text="♻️ Б/У",
+                    callback_data="edit_condition_used"
+                )
+            ]
+        ]
+    )
+
+
+@dp.callback_query(F.data == "edit_condition")
+async def edit_condition_start(callback: CallbackQuery, state: FSMContext):
+
+    if callback.from_user.id != ADMIN_ID:
+        await callback.answer("⛔ Доступ запрещен", show_alert=True)
+        return
+
+    await state.set_state(Form.edit_value)
+
+    await callback.message.answer(
+        "⚙️ Выберите новое состояние:",
+        reply_markup=edit_condition_kb()
+    )
+
+    await callback.answer()
+
+
+@dp.callback_query(F.data.in_(["edit_condition_new", "edit_condition_used"]))
+async def edit_condition_save(
+    callback: CallbackQuery,
+    state: FSMContext
+):
+
+    if callback.from_user.id != ADMIN_ID:
+        await callback.answer("⛔ Доступ запрещен", show_alert=True)
+        return
+
+    data = await state.get_data()
+    ad_id = data.get("edit_ad_id")
+
+    if not ad_id:
+        await callback.message.answer("❌ ID объявления не найден.")
+        await state.clear()
+        await callback.answer()
+        return
+
+    new_condition = (
+        "🆕 Новый"
+        if callback.data == "edit_condition_new"
+        else "♻️ Б/У"
+    )
+
+    conn = sqlite3.connect("ads.db")
+    cursor = conn.cursor()
+
+    cursor.execute("""
+    SELECT type, name, manufacturer,
+           quantity, condition, price,
+           phone, desc, created_at,
+           channel_message_id, archived
+    FROM ads
+    WHERE id = ?
+    """, (ad_id,))
+
+    row = cursor.fetchone()
+
+    if not row:
+        conn.close()
+        await callback.message.answer("❌ Объявление не найдено.")
+        await state.clear()
+        await callback.answer()
+        return
+
+    if row[10] == 1:
+        conn.close()
+        await callback.message.answer(
+            "❌ Архивное объявление редактировать нельзя."
+        )
+        await state.clear()
+        await callback.answer()
+        return
+
+    cursor.execute("""
+    UPDATE ads
+    SET condition = ?
+    WHERE id = ?
+    """, (new_condition, ad_id))
+
+    conn.commit()
+
+    cursor.execute("""
+    SELECT COUNT(*)
+    FROM photos
+    WHERE ad_id = ?
+    """, (ad_id,))
+
+    photo_count = cursor.fetchone()[0]
+
+    conn.close()
+
+    type_text = (
+        "📢 <b>ПРОДАМ</b>"
+        if "Продам" in row[0]
+        else "💵 <b>КУПЛЮ</b>"
+    )
+
+    desc_text = (
+        f"\n📖 Доп. информация: {row[7]}"
+        if row[7]
+        else ""
+    )
+
+    created_dt = datetime.fromisoformat(row[8])
+    created_text = created_dt.strftime("%d.%m.%Y %H:%M")
+
+    text = (
+        f"{type_text}\n\n"
+        f"🧿 <b>{row[1]}</b>\n"
+        f"🏭 Производитель: {row[2]}\n"
+        f"🔢 Кол-во: {row[3]}\n"
+        f"⚙️ Состояние: {new_condition}\n"
+        f"💰 Цена: {row[5]}\n"
+        f"📞 {row[6]}"
+        f"{desc_text}\n\n"
+        f"🕒 {created_text}        {ad_id}"
+    )
+
+    if photo_count > 0:
+
+        await bot.edit_message_caption(
+            chat_id=CHANNEL_ID,
+            message_id=row[9],
+            caption=text,
+            parse_mode="HTML"
+        )
+
+    else:
+
+        await bot.edit_message_text(
+            chat_id=CHANNEL_ID,
+            message_id=row[9],
+            text=text,
+            parse_mode="HTML"
+        )
+
+    await callback.message.answer(
+        f"✅ Состояние изменено на:\n"
+        f"⚙️ <b>{new_condition}</b>",
+        parse_mode="HTML"
+    )
+
+    await state.set_state(Form.edit_field)
+
+    await callback.answer()
+
+# =========================
 # ADMIN EDIT — СОХРАНЕНИЕ ПОЛЕЙ
 # =========================
 

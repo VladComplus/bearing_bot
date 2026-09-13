@@ -855,6 +855,26 @@ async def edit_condition_save(
     await callback.answer()
 
 # =========================
+# ADMIN EDIT — ЦЕНА
+# =========================
+
+@dp.callback_query(F.data == "edit_price")
+async def edit_price_start(callback: CallbackQuery, state: FSMContext):
+
+    if callback.from_user.id != ADMIN_ID:
+        await callback.answer("⛔ Доступ запрещен", show_alert=True)
+        return
+
+    await state.update_data(edit_field="price")
+    await state.set_state(Form.edit_value)
+
+    await callback.message.answer(
+        "💰 Введите новую цену:"
+    )
+
+    await callback.answer()
+
+# =========================
 # ADMIN EDIT — СОХРАНЕНИЕ ПОЛЕЙ
 # =========================
 
@@ -874,7 +894,7 @@ async def edit_field_save(message: Message, state: FSMContext):
         await state.clear()
         return
 
-    if edit_field not in ("name", "manufacturer", "quantity"):
+    if edit_field not in ("name", "manufacturer", "quantity", "price"):
         await message.answer("❌ Ошибка выбора поля.")
         await state.set_state(Form.edit_field)
         return
@@ -912,6 +932,7 @@ async def edit_field_save(message: Message, state: FSMContext):
         return
 
     # Определяем, какое поле меняем
+
     if edit_field == "name":
 
         cursor.execute("""
@@ -923,6 +944,7 @@ async def edit_field_save(message: Message, state: FSMContext):
         display_name = new_value
         display_manufacturer = row[2]
         display_quantity = row[3]
+        display_price = row[5]
 
         success_text = (
             f"✅ Маркировка изменена на:\n"
@@ -940,13 +962,28 @@ async def edit_field_save(message: Message, state: FSMContext):
         display_name = row[1]
         display_manufacturer = new_value
         display_quantity = row[3]
+        display_price = row[5]
 
         success_text = (
             f"✅ Производитель изменён на:\n"
             f"🏭 <b>{new_value}</b>"
         )
 
-    else:
+    elif edit_field == "quantity":
+
+        if not new_value.isdigit():
+            conn.close()
+            await message.answer(
+                "❌ Ошибка ввода, вводить только цифры. Повторите ввод"
+            )
+            return
+
+        if len(new_value) > 6:
+            conn.close()
+            await message.answer(
+                "❌ Ошибка ввода, не более 6 цифр. Повторите ввод"
+            )
+            return
 
         cursor.execute("""
         UPDATE ads
@@ -957,10 +994,49 @@ async def edit_field_save(message: Message, state: FSMContext):
         display_name = row[1]
         display_manufacturer = row[2]
         display_quantity = new_value
+        display_price = row[5]
 
         success_text = (
             f"✅ Количество изменено на:\n"
             f"🔢 <b>{new_value}</b>"
+        )
+
+    elif edit_field == "price":
+
+        if new_value == "Договорная":
+            new_price = "Договорная"
+
+        elif not new_value.isdigit():
+            conn.close()
+            await message.answer(
+                "❌ Ошибка ввода, вводить только цифры. Повторите ввод"
+            )
+            return
+
+        elif len(new_value) > 8:
+            conn.close()
+            await message.answer(
+                "❌ Ошибка ввода, не более 8 цифр. Повторите ввод"
+            )
+            return
+
+        else:
+            new_price = f"{new_value} грн"
+
+        cursor.execute("""
+        UPDATE ads
+        SET price = ?
+        WHERE id = ?
+        """, (new_price, ad_id))
+
+        display_name = row[1]
+        display_manufacturer = row[2]
+        display_quantity = row[3]
+        display_price = new_price
+
+        success_text = (
+            f"✅ Цена изменена на:\n"
+            f"💰 <b>{new_price}</b>"
         )
 
     conn.commit()
@@ -1000,7 +1076,7 @@ async def edit_field_save(message: Message, state: FSMContext):
         f"🏭 Производитель: {display_manufacturer}\n"
         f"🔢 Кол-во: {display_quantity}\n"
         f"⚙️ Состояние: {condition}\n"
-        f"💰 Цена: {row[5]}\n"
+        f"💰 Цена: {display_price}\n"
         f"📞 {row[6]}"
         f"{desc_text}\n\n"
         f"🕒 {created_text}        {ad_id}"

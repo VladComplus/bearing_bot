@@ -346,7 +346,7 @@ def load_db_names():
 DB_NAMES = load_db_names()
 
 # =========================
-# MANUFACTURERS
+# MANUFACTURERS SPECBEARINGS
 # =========================
 
 def load_manufacturers():
@@ -357,6 +357,15 @@ def load_manufacturers():
         return []
 
 MANUFACTURERS = load_manufacturers()
+
+def load_spec_bearings():
+    try:
+        with open("specbearings01.txt", "r", encoding="utf-8") as f:
+            return [line.strip() for line in f if line.strip()]
+    except:
+        return []
+
+SPEC_BEARINGS = load_spec_bearings()
 
 
 # =========================
@@ -1873,10 +1882,21 @@ async def publish_ad(message: Message, state: FSMContext):
         parse_mode="HTML"
     )
 
-    await message.answer(
-        "✅ Опубликовано",
-        reply_markup=published_kb
-    )
+
+    if any(
+        normalize_text(spec) == normalize_text(data['name'])
+        for spec in SPEC_BEARINGS
+    ):
+        await bot.send_message(
+            ADMIN_ID,
+            f"⚠️ <b>СПЕЦ подшипник</b>\n\n"
+            f"🏭 Производитель: {data['manufacturer']}\n"
+            f"🧿 Маркировка: {data['name']}\n"
+            f"🆔 Объявление: {ad_id}",
+            parse_mode="HTML"
+        )
+
+    
     
     data = await state.get_data()
     last_ad_id = data.get("last_ad_id")

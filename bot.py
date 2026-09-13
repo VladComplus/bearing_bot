@@ -669,6 +669,155 @@ async def edit_manufacturer_start(callback: CallbackQuery, state: FSMContext):
     await callback.answer()
 
 # =========================
+# ADMIN EDIT — КОЛИЧЕСТВО
+# =========================
+
+@dp.callback_query(F.data == "edit_quantity")
+async def edit_quantity_start(callback: CallbackQuery, state: FSMContext):
+
+    if callback.from_user.id != ADMIN_ID:
+        await callback.answer("⛔ Доступ запрещен", show_alert=True)
+        return
+
+    await state.update_data(edit_field="quantity")
+    await state.set_state(Form.edit_value)
+
+    await callback.message.answer(
+        "🔢 Введите новое количество:"
+    )
+
+    await callback.answer()
+
+# =========================
+# ADMIN EDIT — СОХРАНЕНИЕ КОЛИЧЕСТВА
+# =========================
+
+@dp.message(Form.edit_value)
+async def edit_quantity_save(message: Message, state: FSMContext):
+
+    if message.from_user.id != ADMIN_ID:
+        await message.answer("⛔ Доступ запрещен")
+        return
+
+    data = await state.get_data()
+    ad_id = data.get("edit_ad_id")
+    edit_field = data.get("edit_field")
+
+    if edit_field != "quantity":
+        return
+
+    new_value = message.text.strip()
+
+    if not new_value:
+        await message.answer("❌ Значение не может быть пустым.")
+        return
+
+    conn = sqlite3.connect("ads.db")
+    cursor = conn.cursor()
+
+    cursor.execute("""
+    SELECT type, name, manufacturer,
+           quantity, condition, price,
+           phone, desc, created_at,
+           channel_message_id, archived
+    FROM ads
+    WHERE id = ?
+    """, (ad_id,))
+
+    row = cursor.fetchone()
+
+    if not row:
+        conn.close()
+        await message.answer("❌ Объявление не найдено.")
+        await state.clear()
+        return
+
+    if row[10] == 1:
+        conn.close()
+        await message.answer("❌ Архивное объявление редактировать нельзя.")
+        await state.clear()
+        return
+
+    cursor.execute("""
+    UPDATE ads
+    SET quantity = ?
+    WHERE id = ?
+    """, (new_value, ad_id))
+
+    conn.commit()
+
+    cursor.execute("""
+    SELECT COUNT(*)
+    FROM photos
+    WHERE ad_id = ?
+    """, (ad_id,))
+
+    photo_count = cursor.fetchone()[0]
+
+    conn.close()
+
+    condition = (
+        row[4]
+        .replace("🆕 ", "")
+        .replace("♻️ ", "")
+        .lower()
+    )
+
+    type_text = (
+        "📢 <b>ПРОДАМ</b>"
+        if "Продам" in row[0]
+        else "💵 <b>КУПЛЮ</b>"
+    )
+
+    desc_text = (
+        f"\n📖 Доп. информация: {row[7]}"
+        if row[7]
+        else ""
+    )
+
+    created_dt = datetime.fromisoformat(row[8])
+    created_text = created_dt.strftime("%d.%m.%Y %H:%M")
+
+    text = (
+        f"{type_text}\n\n"
+        f"🧿 <b>{row[1]}</b>\n"
+        f"🏭 Производитель: {row[2]}\n"
+        f"🔢 Кол-во: {new_value}\n"
+        f"⚙️ Состояние: {condition}\n"
+        f"💰 Цена: {row[5]}\n"
+        f"📞 {row[6]}"
+        f"{desc_text}\n\n"
+        f"🕒 {created_text}        {ad_id}"
+    )
+
+    if photo_count > 0:
+
+        await bot.edit_message_caption(
+            chat_id=CHANNEL_ID,
+            message_id=row[9],
+            caption=text,
+            parse_mode="HTML"
+        )
+
+    else:
+
+        await bot.edit_message_text(
+            chat_id=CHANNEL_ID,
+            message_id=row[9],
+            text=text,
+            parse_mode="HTML"
+        )
+
+    await message.answer(
+        f"✅ Количество изменено на:\n"
+        f"🔢 <b>{new_value}</b>",
+        parse_mode="HTML"
+    )
+
+    await state.set_state(Form.edit_field)
+
+
+# =========================
 # ADMIN EDIT — СОХРАНЕНИЕ МАРКИРОВКИ / ПРОИЗВОДИТЕЛЯ
 # =========================
 

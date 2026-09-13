@@ -631,7 +631,7 @@ async def edit_manufacturer_start(callback: CallbackQuery, state: FSMContext):
     await callback.answer()
 
 # =========================
-# ADMIN EDIT — СОХРАНЕНИЕ МАРКИРОВКИ
+# ADMIN EDIT — СОХРАНЕНИЕ МАРКИРОВКИ / ПРОИЗВОДИТЕЛЯ
 # =========================
 
 @dp.message(Form.edit_value)
@@ -641,10 +641,10 @@ async def edit_name_save(message: Message, state: FSMContext):
         await message.answer("⛔ Доступ запрещен")
         return
 
-    new_name = message.text.strip()
+    new_value = message.text.strip()
 
-    if not new_name:
-        await message.answer("❌ Маркировка не может быть пустой.")
+    if not new_value:
+        await message.answer("❌ Значение не может быть пустым.")
         return
 
     data = await state.get_data()
@@ -654,6 +654,11 @@ async def edit_name_save(message: Message, state: FSMContext):
     if not ad_id:
         await message.answer("❌ ID объявления не найден.")
         await state.clear()
+        return
+
+    if edit_field not in ("name", "manufacturer"):
+        await message.answer("❌ Ошибка выбора поля.")
+        await state.set_state(Form.edit_field)
         return
 
     conn = sqlite3.connect("ads.db")
@@ -682,13 +687,38 @@ async def edit_name_save(message: Message, state: FSMContext):
         await state.clear()
         return
 
-    # Меняем только текущее значение.
-    # original_name НЕ изменяем.
-    cursor.execute("""
-    UPDATE ads
-    SET name = ?
-    WHERE id = ?
-    """, (new_name, ad_id))
+    # Определяем, что именно меняем
+    if edit_field == "name":
+
+        cursor.execute("""
+        UPDATE ads
+        SET name = ?
+        WHERE id = ?
+        """, (new_value, ad_id))
+
+        display_name = new_value
+        display_manufacturer = row[2]
+
+        success_text = (
+            f"✅ Маркировка изменена на:\n"
+            f"🧿 <b>{new_value}</b>"
+        )
+
+    else:
+
+        cursor.execute("""
+        UPDATE ads
+        SET manufacturer = ?
+        WHERE id = ?
+        """, (new_value, ad_id))
+
+        display_name = row[1]
+        display_manufacturer = new_value
+
+        success_text = (
+            f"✅ Производитель изменён на:\n"
+            f"🏭 <b>{new_value}</b>"
+        )
 
     conn.commit()
 
@@ -728,8 +758,8 @@ async def edit_name_save(message: Message, state: FSMContext):
 
     text = (
         f"{type_text}\n\n"
-        f"🧿 <b>{new_name}</b>\n"
-        f"🏭 Производитель: {row[2]}\n"
+        f"🧿 <b>{display_name}</b>\n"
+        f"🏭 Производитель: {display_manufacturer}\n"
         f"🔢 Кол-во: {row[3]}\n"
         f"⚙️ Состояние: {condition}\n"
         f"💰 Цена: {row[5]}\n"
@@ -758,8 +788,7 @@ async def edit_name_save(message: Message, state: FSMContext):
         )
 
     await message.answer(
-        f"✅ Маркировка изменена на:\n"
-        f"🧿 <b>{new_name}</b>",
+        success_text,
         parse_mode="HTML"
     )
 

@@ -1320,6 +1320,271 @@ async def edit_field_save(message: Message, state: FSMContext):
     await state.set_state(Form.edit_field)
 
 # =========================
+# ADMIN EDIT — ГОТОВО, СОХРАНЕНИЕ ФОТО
+# =========================
+
+
+@dp.message(Form.edit_photos, F.text == "✅ Готово")
+async def edit_finish_photos(message: Message, state: FSMContext):
+
+    if message.from_user.id != ADMIN_ID:
+        await message.answer("⛔ Доступ запрещен")
+        return
+
+    data = await state.get_data()
+    photos = data.get("edit_photos", [])
+    ad_id = data.get("edit_ad_id")
+
+    if not photos:
+        await message.answer(
+            "ℹ️ Новые фотографии не загружены.\n"
+            "Отправьте хотя бы одну фотографию."
+        )
+        return
+
+    if not ad_id:
+        await message.answer("❌ ID объявления не найден.")
+        await state.clear()
+        return
+
+    conn = sqlite3.connect("ads.db")
+    cursor = conn.cursor()
+
+    cursor.execute("""
+    SELECT type, name, manufacturer,
+           quantity, condition, price,
+           phone, desc, created_at,
+           channel_message_id, archived
+    FROM ads
+    WHERE id = ?
+    """, (ad_id,))
+
+    row = cursor.fetchone()
+
+    if not row:
+        conn.close()
+        await message.answer("❌ Объявление не найдено.")
+        await state.clear()
+        return
+
+    if row[10] == 1:
+        conn.close()
+        await message.answer(
+            "❌ Архивное объявление редактировать нельзя."
+        )
+        await state.clear()
+        return
+
+    # Получаем ID старых фотографий
+    cursor.execute("""
+    SELECT channel_message_id
+    FROM photos
+    WHERE ad_id = ?
+    ORDER BY position
+    """, (ad_id,))
+
+    old_photo_ids = [
+        r[0] for r in cursor.fetchall()
+        if r[0]
+    ]
+
+    conn.close()
+
+    # =========================
+    # ФОРМИРУЕМ ТЕКСТ ОБЪЯВЛЕНИЯ
+    # =========================
+
+    type_text = (
+        "📢 <b>ПРОДАМ</b>"
+        if "Продам" in row[0]
+        else "💵 <b>КУПЛЮ</b>"
+    )
+
+    desc_text = (
+        f"\n📖 Доп. информация: {row[7]}"
+        if row[7]
+        else ""
+    )
+
+    created_dt = datetime.fromisoformat(row[8])
+    created_text = created_dt.strftime("%d.%m.%Y %H:%M")
+
+    text = (
+        f"{type_text}\n\n"
+        f"🧿 <b>{row[1]}</b>\n"
+        f"🏭 Производитель: {row[2]}\n"
+        f"🔢 Кол-во: {row[3]}\n"
+        f"⚙️ Состояние: {row[4]}\n"
+        f"💰 Цена: {row[5]}\n"
+        f"📞 {row[6]}"
+        f"{desc_text}\n\n"
+        f"🕒 {created_text}        {ad_id}"
+    )
+
+    # =========================
+    # ФОРМИРУЕМ НОВЫЙ АЛЬБОМ
+    # =========================
+
+    media = []
+
+    for index, file_id in enumerate(photos):
+
+        if index == 0:
+            media.append(
+                InputMediaPhoto(
+                    media=file_id,
+                    caption=text,
+                    parse_mode="HTML"
+                )
+            )
+        else:
+            media.append(
+                InputMediaPhoto(
+                    media=file_id
+                )
+            )
+
+    # =========================
+    # СНАЧАЛА ОТПРАВЛЯЕМ НОВЫЕ ФОТО
+    # =========================
+
+    try:
+
+        sent_messages = await bot.send_media_group(
+            chat_id=CHANNEL_ID,
+            media=media
+        )
+
+    except Exception as e:
+
+        await message.answer(
+            "❌ Не удалось загрузить новые фотографии.\n\n"
+            "Старые фотографии не изменены."
+        )
+
+        return
+
+    new_message_ids = [
+        msg.message_id
+        for msg in sent_messages
+    ]
+
+    # =========================
+    # СОХРАНЯЕМ НОВЫЕ ФОТО В БАЗУ
+    # =========================
+
+    conn = sqlite3.connect("ads.db")
+    cursor = conn.cursor()
+
+    try:
+
+        cursor.execute("""
+        DELETE FROM photos
+        WHERE ad_id = ?
+        """, (ad_id,))
+
+        for position, (file_id, sent_msg) in enumerate(
+            zip(photos, sent_messages),
+            start=1
+        ):
+
+            cursor.execute("""
+            INSERT INTO photos (
+                ad_id,
+                file_id,
+                position,
+                channel_message_id
+            )
+            VALUES (?, ?, ?, ?)
+            """, (
+                ad_id,
+                file_id,
+                position,
+                sent_msg.message_id
+            ))
+
+        cursor.execute("""
+        UPDATE ads
+        SET channel_message_id = ?
+        WHERE id = ?
+        """, (
+            new_message_ids[0],
+            ad_id
+        ))
+
+        conn.commit()
+
+    except Exception:
+
+        conn.rollback()
+        conn.close()
+
+        # Удаляем новый альбом,
+        # если база не смогла сохранить изменения
+        for message_id in new_message_ids:
+
+            try:
+                await bot.delete_message(
+                    chat_id=CHANNEL_ID,
+                    message_id=message_id
+                )
+            except Exception:
+                pass
+
+        await message.answer(
+            "❌ Ошибка сохранения фотографий в базе.\n\n"
+            "Старые фотографии не изменены."
+        )
+
+        return
+
+    conn.close()
+
+    # =========================
+    # УДАЛЯЕМ СТАРЫЕ СООБЩЕНИЯ
+    # =========================
+
+    if old_photo_ids:
+
+        old_message_ids = old_photo_ids
+
+    else:
+
+        # Если фотографий раньше не было,
+        # старое объявление было обычным текстовым сообщением
+        old_message_ids = (
+            [row[9]]
+            if row[9]
+            else []
+        )
+
+    for old_message_id in old_message_ids:
+
+        try:
+            await bot.delete_message(
+                chat_id=CHANNEL_ID,
+                message_id=old_message_id
+            )
+        except Exception:
+            pass
+
+    # =========================
+    # ЗАВЕРШЕНИЕ
+    # =========================
+
+    await message.answer(
+        "✅ Фотографии объявления успешно заменены."
+    )
+
+    await state.set_state(Form.edit_field)
+
+    await message.answer(
+        "✏️ Выберите поле для редактирования:",
+        reply_markup=edit_ad_kb()
+    )
+
+
+# =========================
 # UI
 # =========================
 

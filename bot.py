@@ -2272,7 +2272,8 @@ async def publish_ad(message: Message, state: FSMContext):
         )
 
     
-    
+
+
     data = await state.get_data()
     last_ad_id = data.get("last_ad_id")
 
@@ -2280,6 +2281,12 @@ async def publish_ad(message: Message, state: FSMContext):
 
     if last_ad_id:
         await state.update_data(last_ad_id=last_ad_id)
+
+    await message.answer(
+        "✅ Опубликовано",
+        reply_markup=published_kb
+    )
+    
     
 
 

@@ -922,6 +922,116 @@ async def edit_desc_start(callback: CallbackQuery, state: FSMContext):
     )
 
     await callback.answer()
+# =========================
+# ADMIN EDIT — ЗАМЕНА ФОТО
+# =========================
+
+def edit_photo_kb():
+    return ReplyKeyboardMarkup(
+        keyboard=[
+            [
+                KeyboardButton(text="✅ Готово")
+            ],
+            [
+                KeyboardButton(text="❌ Отмена")
+            ]
+        ],
+        resize_keyboard=True
+    )
+
+
+@dp.callback_query(F.data == "edit_photos")
+async def edit_photos_start(callback: CallbackQuery, state: FSMContext):
+
+    if callback.from_user.id != ADMIN_ID:
+        await callback.answer("⛔ Доступ запрещен", show_alert=True)
+        return
+
+    data = await state.get_data()
+    ad_id = data.get("edit_ad_id")
+
+    if not ad_id:
+        await callback.message.answer("❌ ID объявления не найден.")
+        await callback.answer()
+        return
+
+    conn = sqlite3.connect("ads.db")
+    cursor = conn.cursor()
+
+    cursor.execute("""
+    SELECT archived
+    FROM ads
+    WHERE id = ?
+    """, (ad_id,))
+
+    row = cursor.fetchone()
+    conn.close()
+
+    if not row:
+        await callback.message.answer("❌ Объявление не найдено.")
+        await callback.answer()
+        return
+
+    if row[0] == 1:
+        await callback.message.answer(
+            "❌ Архивное объявление редактировать нельзя."
+        )
+        await callback.answer()
+        return
+
+    # Очищаем временные фотографии предыдущего редактирования
+    await state.update_data(
+        edit_photos=[]
+    )
+
+    await state.set_state(Form.edit_photos)
+
+    await callback.message.answer(
+        "📷 <b>Замена фотографий</b>\n\n"
+        "Отправьте от 1 до 4 новых фотографий.\n"
+        "После загрузки нажмите «✅ Готово».",
+        parse_mode="HTML",
+        reply_markup=edit_photo_kb()
+    )
+
+    await callback.answer()
+
+# =========================
+# ADMIN EDIT — ПРИЁМ НОВЫХ ФОТО
+# =========================
+
+@dp.message(Form.edit_photos, F.photo)
+async def edit_get_photo(message: Message, state: FSMContext):
+
+    data = await state.get_data()
+    photos = data.get("edit_photos", [])
+
+    if len(photos) >= 4:
+        await message.answer(
+            "❌ Можно загрузить максимум 4 фотографии.\n"
+            "Нажмите «✅ Готово».",
+            reply_markup=edit_photo_kb()
+        )
+        return
+
+    file_id = message.photo[-1].file_id
+    photos.append(file_id)
+
+    await state.update_data(edit_photos=photos)
+
+    if len(photos) < 4:
+        await message.answer(
+            f"📷 Новая фотография {len(photos)} из 4 загружена.\n\n"
+            "Можете отправить ещё фотографию "
+            "или нажмите «✅ Готово».",
+            reply_markup=edit_photo_kb()
+        )
+    else:
+        await message.answer(
+            "✅ Загружено 4 фотографии — это максимум.\n"
+            "Нажмите «✅ Готово».",
+            reply_markup=edit_photo_kb()
+        )
 
 
 # =========================

@@ -2249,30 +2249,34 @@ async def publish_ad(message: Message, state: FSMContext):
 
     if data.get("manufacturer_new", False):
         await bot.send_message(
-        ADMIN_ID,
-        f"⚠️ <b>Новый производитель</b>\n\n"
-        f"🏭 Производитель: {data['manufacturer']}\n"
-        f"🧿 Маркировка: {data['name']}\n"
-        f"🆔 Объявление: {ad_id}",
-        parse_mode="HTML"
-    )
-
-
-    if any(
-        normalize_text(spec) == normalize_text(data['name'])
-        for spec in SPEC_BEARINGS
-    ):
-        await bot.send_message(
             ADMIN_ID,
-            f"⚠️ <b>СПЕЦ подшипник</b>\n\n"
+            f"⚠️ <b>Новый производитель</b>\n\n"
             f"🏭 Производитель: {data['manufacturer']}\n"
             f"🧿 Маркировка: {data['name']}\n"
             f"🆔 Объявление: {ad_id}",
             parse_mode="HTML"
         )
 
-    
 
+    
+    # Проверка спецподшипника только по цифровой части маркировки
+    marking_numbers = re.findall(r"\d+", data['name'])
+
+    if any(
+        number == spec.strip()
+        for number in marking_numbers
+        for spec in SPEC_BEARINGS
+    ):
+        await bot.send_message(
+            ADMIN_ID,
+            f"⚠️ <b>СПЕЦ подшипник</b>\n\n"
+            f"🧿 Маркировка: {data['name']}\n"
+            f"🏭 Производитель: {data['manufacturer']}\n"
+            f"🆔 Объявление: {ad_id}",
+            parse_mode="HTML"
+        )
+    
+      
 
     data = await state.get_data()
     last_ad_id = data.get("last_ad_id")

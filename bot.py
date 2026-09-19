@@ -358,6 +358,20 @@ def load_manufacturers():
 
 MANUFACTURERS = load_manufacturers()
 
+def find_manufacturer_suggestions(text: str):
+    text = text.strip().lower()
+
+    if not text:
+        return []
+
+    result = []
+
+    for manufacturer in MANUFACTURERS:
+        if manufacturer.lower().startswith(text):
+            result.append(manufacturer)
+
+    return result
+
 def load_spec_bearings():
     try:
         with open("specbearings01.txt", "r", encoding="utf-8") as f:

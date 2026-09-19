@@ -358,19 +358,7 @@ def load_manufacturers():
 
 MANUFACTURERS = load_manufacturers()
 
-def find_manufacturer_suggestions(text: str):
-    text = text.strip().lower()
 
-    if not text:
-        return []
-
-    result = []
-
-    for manufacturer in MANUFACTURERS:
-        if manufacturer.lower().startswith(text):
-            result.append(manufacturer)
-
-    return result
 
 def load_spec_bearings():
     try:
@@ -1907,26 +1895,7 @@ async def get_manufacturer(message: Message, state: FSMContext):
             )
             return
 
-        suggestions = find_manufacturer_suggestions(manufacturer)
-
-        if suggestions:
-            suggestions = suggestions[:8]
-
-            keyboard = ReplyKeyboardMarkup(
-                keyboard=[
-                    [KeyboardButton(text=item)]
-                    for item in suggestions
-                ],
-                resize_keyboard=True,
-                one_time_keyboard=True
-            )
-
-            await message.answer(
-                "🔎 Выберите производителя:",
-                reply_markup=keyboard
-            )
-            return
-
+        
         
         await state.update_data(
             manufacturer=manufacturer,

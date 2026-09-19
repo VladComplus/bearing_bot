@@ -1,4 +1,4 @@
-# FINAL VERSION V6.4 (add manufacturer)
+# FINAL VERSION V6.7 (автоподбор производителя)
 
 import asyncio
 import logging
@@ -1907,6 +1907,27 @@ async def get_manufacturer(message: Message, state: FSMContext):
             )
             return
 
+        suggestions = find_manufacturer_suggestions(manufacturer)
+
+        if suggestions:
+            suggestions = suggestions[:8]
+
+            keyboard = ReplyKeyboardMarkup(
+                keyboard=[
+                    [KeyboardButton(text=item)]
+                    for item in suggestions
+                ],
+                resize_keyboard=True,
+                one_time_keyboard=True
+            )
+
+            await message.answer(
+                "🔎 Выберите производителя:",
+                reply_markup=keyboard
+            )
+            return
+
+        
         await state.update_data(
             manufacturer=manufacturer,
             manufacturer_new=True

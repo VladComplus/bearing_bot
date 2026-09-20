@@ -267,6 +267,12 @@ def init_db():
         ADD COLUMN availability TEXT
         """)
 
+    if "original_availability" not in columns:
+        cursor.execute("""
+        ALTER TABLE ads
+        ADD COLUMN original_availability TEXT
+        """)
+
     if "username" not in columns:
         cursor.execute("""
         ALTER TABLE ads
@@ -278,13 +284,7 @@ def init_db():
         ALTER TABLE ads
         ADD COLUMN manufacturer TEXT
         """)
-    
-    if "availability" not in columns:
-        cursor.execute("""
-        ALTER TABLE ads
-        ADD COLUMN availability TEXT
-        """)
-    
+        
     if "original_name" not in columns:
         cursor.execute("""
         ALTER TABLE ads

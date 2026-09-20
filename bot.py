@@ -1,4 +1,4 @@
-# FINAL VERSION V6.7 (автоподбор производителя)
+# FINAL VERSION V6.8 (автоподбор производителя)
 
 import asyncio
 import logging

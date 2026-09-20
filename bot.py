@@ -113,8 +113,8 @@ async def db_view(message: Message):
         f"⚙️ Состояние: {row[9]}\n"
         f"💰 Цена: {row[11]}\n"
         f"📞 {row[13]}\n"
-        f"{status}\n"
-        f"📖 {current_desc}\n\n"
+        f"📖 Описание: {current_desc}\n"
+        f"{status}\n\n"
 
         f"<b>ИСХОДНЫЕ ДАННЫЕ</b>\n"
         f"🧿 Маркировка: {original_name}\n"

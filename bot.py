@@ -628,7 +628,7 @@ async def edit_find_ad(message: Message, state: FSMContext):
     SELECT id, type, name, manufacturer,
            quantity, availability, condition, price,
            phone, desc, archived,
-           channel_message_id
+           channel_message_id, user_id, username
     FROM ads
     WHERE id = ?
     """, (ad_id,))
@@ -678,6 +678,8 @@ async def edit_find_ad(message: Message, state: FSMContext):
         f"📖 Описание: {row[9]}\n"
         f"📷 Фото: {photo_count} шт.\n\n"
         f"🆔 {row[0]}\n"
+        f"👤 Username: @{row[13] if row[13] else 'нет'}\n"
+        f"🆔 Telegram ID: {row[12]}\n"
         f"{status}"
     )
 

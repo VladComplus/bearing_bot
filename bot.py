@@ -525,6 +525,8 @@ class Form(StatesGroup):
     desc = State()
     photos = State()
     search = State()
+    request_quantity = State()
+    request_payment = State()
 
     # ADMIN EDIT
     edit_ad_id = State()
@@ -2049,7 +2051,7 @@ async def search_ads(message: Message, state: FSMContext):
             inline_keyboard=[
                 [
                     InlineKeyboardButton(
-                        text=f"📨 Отправить запрос на {query}",
+                        text=f"📨 Отправить поставщикам запрос на {query}",
                         callback_data="send_bearing_request"
                     )
                 ]
@@ -2075,7 +2077,7 @@ async def search_ads(message: Message, state: FSMContext):
         
         
         await message.answer(
-            "❌ Ничего не найдено",
+            "❌ Нет объявлений с требуемой маркировкой",
             reply_markup=request_kb
         )
 
@@ -2083,7 +2085,6 @@ async def search_ads(message: Message, state: FSMContext):
             "Выберите действие:",
             reply_markup=main_kb
         )
-        await state.clear()
         return
 
     for row in found[:10]:
@@ -2138,6 +2139,73 @@ async def search_ads(message: Message, state: FSMContext):
 
     await state.clear()
 
+# =========================
+# ЗАПРОС ПОСТАВЩИКАМ
+# =========================
+
+@dp.callback_query(F.data == "send_bearing_request")
+async def start_bearing_request(
+    callback: CallbackQuery,
+    state: FSMContext
+):
+
+    data = await state.get_data()
+    search_request = data.get("search_request")
+
+    if not search_request:
+        await callback.message.answer(
+            "❌ Запрос не найден. Повторите поиск."
+        )
+        await callback.answer()
+        return
+
+    await callback.message.answer(
+        "🔢 Требуемое количество:"
+    )
+
+    await state.set_state(Form.request_quantity)
+
+    await callback.answer()
+
+# =========================
+# ЗАПРОС ПОСТАВЩИКАМ — КОЛИЧЕСТВО
+# =========================
+
+@dp.message(Form.request_quantity)
+async def get_request_quantity(message: Message, state: FSMContext):
+
+    text = message.text.strip()
+
+    if not text.isdigit():
+        await message.answer(
+            "❌ Ошибка ввода, вводить только цифры. Повторите ввод"
+        )
+        return
+
+    if len(text) > 6:
+        await message.answer(
+            "❌ Ошибка ввода, не более 6 цифр. Повторите ввод"
+        )
+        return
+
+    await state.update_data(request_quantity=text)
+
+    payment_kb = ReplyKeyboardMarkup(
+        keyboard=[
+            [
+                KeyboardButton(text="💵 Наличные"),
+                KeyboardButton(text="🏦 Б/н")
+            ]
+        ],
+        resize_keyboard=True
+    )
+
+    await message.answer(
+        "💳 Форма оплаты:",
+        reply_markup=payment_kb
+    )
+    await state.set_state(Form.request_payment)
+    
 @dp.message(Form.name)
 async def get_name(message: Message, state: FSMContext):
     name = message.text.strip()

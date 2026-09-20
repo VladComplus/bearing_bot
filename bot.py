@@ -527,6 +527,7 @@ class Form(StatesGroup):
     search = State()
     request_quantity = State()
     request_payment = State()
+    request_phone = State()
 
     # ADMIN EDIT
     edit_ad_id = State()
@@ -2205,7 +2206,29 @@ async def get_request_quantity(message: Message, state: FSMContext):
         reply_markup=payment_kb
     )
     await state.set_state(Form.request_payment)
-    
+
+# =========================
+# ЗАПРОС ПОСТАВЩИКАМ — ОПЛАТА
+# =========================
+
+@dp.message(Form.request_payment)
+async def get_request_payment(message: Message, state: FSMContext):
+
+    if message.text not in ["💵 Наличные", "🏦 Б/н"]:
+        await message.answer(
+            "❌ Выберите форму оплаты кнопкой ниже."
+        )
+        return
+
+    await state.update_data(request_payment=message.text)
+
+    await message.answer(
+        "📞 Телефон:",
+        reply_markup=ReplyKeyboardRemove()
+    )
+
+    await state.set_state(Form.request_phone)
+
 @dp.message(Form.name)
 async def get_name(message: Message, state: FSMContext):
     name = message.text.strip()

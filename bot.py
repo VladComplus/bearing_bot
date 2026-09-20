@@ -663,8 +663,11 @@ async def edit_find_ad(message: Message, state: FSMContext):
 
     desc_text = row[9] if row[9] else "—"
 
+    type_text = "📢 ПРОДАМ" if "Продам" in row[1] else "💵 КУПЛЮ"
+
     msg = (
         f"✏️ <b>РЕДАКТИРОВАНИЕ</b>\n\n"
+        f"{type_text}\n\n"
         f"🧿 Маркировка: <b>{row[2]}</b>\n"
         f"🏭 Производитель: {row[3]}\n"
         f"🔢 Кол-во: {row[4]}\n"

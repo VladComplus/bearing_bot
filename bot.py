@@ -505,6 +505,7 @@ class Form(StatesGroup):
     name = State()
     manufacturer = State()
     quantity = State()
+    availability = State()
     condition = State()
     price = State()
     phone = State()
@@ -1638,6 +1639,19 @@ published_kb = ReplyKeyboardMarkup(
 
 condition_kb = ReplyKeyboardMarkup(
     keyboard=[[KeyboardButton(text="🆕 Новый"), KeyboardButton(text="♻️ Б/У")]],
+    resize_keyboard=True
+)
+
+availability_kb = ReplyKeyboardMarkup(
+    keyboard=[
+        [
+            KeyboardButton(text="🟢 В наличии"),
+            KeyboardButton(text="🟡 Под заказ")
+        ],
+        [
+            KeyboardButton(text="🔵 Ожидается")
+        ]
+    ],
     resize_keyboard=True
 )
 

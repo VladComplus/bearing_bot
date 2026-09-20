@@ -1,4 +1,4 @@
-# FINAL VERSION V6.9 (добавили отправку админу уведомления о посике)
+# FINAL VERSION V6.10 (добавили отправку админу уведомления о посике)
 
 import asyncio
 import logging

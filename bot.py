@@ -258,10 +258,10 @@ def init_db():
     columns = [row[1] for row in cursor.fetchall()]
 
     if "username" not in columns:
-    cursor.execute("""
-    ALTER TABLE ads
-    ADD COLUMN username TEXT
-    """)
+        cursor.execute("""
+        ALTER TABLE ads
+        ADD COLUMN username TEXT
+        """)
 
     if "manufacturer" not in columns:
         cursor.execute("""

@@ -261,6 +261,12 @@ def init_db():
     cursor.execute("PRAGMA table_info(ads)")
     columns = [row[1] for row in cursor.fetchall()]
 
+    if "availability" not in columns:
+        cursor.execute("""
+        ALTER TABLE ads
+        ADD COLUMN availability TEXT
+        """)
+
     if "username" not in columns:
         cursor.execute("""
         ALTER TABLE ads

@@ -556,9 +556,15 @@ def edit_ad_kb():
                     callback_data="edit_quantity"
                 ),
                 InlineKeyboardButton(
-                    text="⚙️ Состояние",
-                    callback_data="edit_condition"
-                )
+                    text="📦 Наличие",
+                    callback_data="edit_availability"
+                )            
+            ],
+            [    
+                InlineKeyboardButton(
+                text="⚙️ Состояние",
+                callback_data="edit_condition"
+                )    
             ],
             [
                 InlineKeyboardButton(
@@ -736,6 +742,52 @@ async def edit_quantity_start(callback: CallbackQuery, state: FSMContext):
 
     await callback.answer()
 
+# =========================
+# ADMIN EDIT — НАЛИЧИЕ
+# =========================
+
+def edit_availability_kb():
+    return InlineKeyboardMarkup(
+        inline_keyboard=[
+            [
+                InlineKeyboardButton(
+                    text="🟢 В наличии",
+                    callback_data="edit_availability_in_stock"
+                ),
+                InlineKeyboardButton(
+                    text="🟡 Под заказ",
+                    callback_data="edit_availability_on_order"
+                )
+            ],
+            [
+                InlineKeyboardButton(
+                    text="🔵 Ожидается",
+                    callback_data="edit_availability_expected"
+                )
+            ]
+        ]
+    )
+
+
+@dp.callback_query(F.data == "edit_availability")
+async def edit_availability_start(
+    callback: CallbackQuery,
+    state: FSMContext
+):
+
+    if callback.from_user.id != ADMIN_ID:
+        await callback.answer("⛔ Доступ запрещен", show_alert=True)
+        return
+
+    await state.set_state(Form.edit_value)
+
+    await callback.message.answer(
+        "📦 Выберите новое наличие:",
+        reply_markup=edit_availability_kb()
+    )
+
+    await callback.answer()
+    
 # =========================
 # ADMIN EDIT — СОСТОЯНИЕ
 # =========================

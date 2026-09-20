@@ -790,6 +790,149 @@ async def edit_availability_start(
     await callback.answer()
     
 # =========================
+# ADMIN EDIT — СОХРАНЕНИЕ НАЛИЧИЯ
+# =========================
+
+@dp.callback_query(
+    F.data.in_([
+        "edit_availability_in_stock",
+        "edit_availability_on_order",
+        "edit_availability_expected"
+    ])
+)
+async def edit_availability_save(
+    callback: CallbackQuery,
+    state: FSMContext
+):
+
+    if callback.from_user.id != ADMIN_ID:
+        await callback.answer("⛔ Доступ запрещен", show_alert=True)
+        return
+
+    data = await state.get_data()
+    ad_id = data.get("edit_ad_id")
+
+    if not ad_id:
+        await callback.message.answer("❌ ID объявления не найден.")
+        await state.clear()
+        await callback.answer()
+        return
+
+    availability_map = {
+        "edit_availability_in_stock": "🟢 В наличии",
+        "edit_availability_on_order": "🟡 Под заказ",
+        "edit_availability_expected": "🔵 Ожидается"
+    }
+
+    new_availability = availability_map[callback.data]
+
+    conn = sqlite3.connect("ads.db")
+    cursor = conn.cursor()
+
+    cursor.execute("""
+    SELECT type, name, manufacturer,
+           quantity, availability, condition, price,
+           phone, desc, created_at,
+           channel_message_id, archived
+    FROM ads
+    WHERE id = ?
+    """, (ad_id,))
+
+    row = cursor.fetchone()
+
+    if not row:
+        conn.close()
+        await callback.message.answer("❌ Объявление не найдено.")
+        await state.clear()
+        await callback.answer()
+        return
+
+    if row[11] == 1:
+        conn.close()
+        await callback.message.answer(
+            "❌ Архивное объявление редактировать нельзя."
+        )
+        await state.clear()
+        await callback.answer()
+        return
+
+    cursor.execute("""
+    UPDATE ads
+    SET availability = ?
+    WHERE id = ?
+    """, (new_availability, ad_id))
+
+    conn.commit()
+
+    cursor.execute("""
+    SELECT COUNT(*)
+    FROM photos
+    WHERE ad_id = ?
+    """, (ad_id,))
+
+    photo_count = cursor.fetchone()[0]
+
+    conn.close()
+
+    type_text = (
+        "📢 <b>ПРОДАМ</b>"
+        if "Продам" in row[0]
+        else "💵 <b>КУПЛЮ</b>"
+    )
+
+    condition = row[5]
+
+    desc_text = (
+        f"\n📖 Доп. информация: {row[8]}"
+        if row[8]
+        else ""
+    )
+
+    created_dt = datetime.fromisoformat(row[9])
+    created_text = created_dt.strftime("%d.%m.%Y %H:%M")
+
+    text = (
+        f"{type_text}\n\n"
+        f"🧿 <b>{row[1]}</b>\n"
+        f"🏭 Производитель: {row[2]}\n"
+        f"🔢 Кол-во: {row[3]}\n"
+        f"📦 Наличие: {new_availability}\n"
+        f"⚙️ Состояние: {condition}\n"
+        f"💰 Цена: {row[6]}\n"
+        f"📞 {row[7]}"
+        f"{desc_text}\n\n"
+        f"🕒 {created_text}        {ad_id}"
+    )
+
+    if photo_count > 0:
+
+        await bot.edit_message_caption(
+            chat_id=CHANNEL_ID,
+            message_id=row[10],
+            caption=text,
+            parse_mode="HTML"
+        )
+
+    else:
+
+        await bot.edit_message_text(
+            chat_id=CHANNEL_ID,
+            message_id=row[10],
+            text=text,
+            parse_mode="HTML"
+        )
+
+    await callback.message.answer(
+        f"✅ Наличие изменено на:\n"
+        f"📦 <b>{new_availability}</b>",
+        parse_mode="HTML"
+    )
+
+    await state.set_state(Form.edit_field)
+
+    await callback.answer()
+
+# =========================
 # ADMIN EDIT — СОСТОЯНИЕ
 # =========================
 

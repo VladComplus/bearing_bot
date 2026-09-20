@@ -80,7 +80,7 @@ async def db_view(message: Message):
            phone, original_phone,
            desc, original_desc,
            archived, created_at, channel_message_id,
-           user_id, username
+           user_id, username, type
     FROM ads
     WHERE id = ?
     """, (ad_id,))
@@ -105,7 +105,10 @@ async def db_view(message: Message):
     original_phone = row[14] if row[14] else "—"
     original_desc = row[16] if row[16] else "—"
 
+    type_text = "📢 ПРОДАМ" if "Продам" in row[22] else "💵 КУПЛЮ"
+    
     msg = (
+        f"{type_text}\n\n"
         f"📦 <b>{row[1]}</b>\n"
         f"🏭 Производитель: {row[2]}\n"
         f"🔢 Кол-во: {row[5]}\n"

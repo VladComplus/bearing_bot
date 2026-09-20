@@ -2200,13 +2200,14 @@ async def publish_ad(message: Message, state: FSMContext):
         id, type, name, manufacturer,
         original_name, original_manufacturer,
         quantity, original_quantity,
+        availability, original_availability,
         condition, original_condition,
         price, original_price,
         phone, original_phone,
         desc, original_desc,
         user_id, username, created_at, expires_at, archived
     )
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0)
     """, (
         ad_id,
         data['type'],
@@ -2218,6 +2219,9 @@ async def publish_ad(message: Message, state: FSMContext):
 
         data['quantity'],
         data['quantity'],
+
+        data['availability'],
+        data['availability'],
 
         data['condition'],
         data['condition'],

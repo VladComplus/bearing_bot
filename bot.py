@@ -2043,6 +2043,19 @@ async def search_ads(message: Message, state: FSMContext):
         user_id = message.from_user.id
         username = message.from_user.username or "нет"
 
+        await state.update_data(search_request=query)
+
+        request_kb = InlineKeyboardMarkup(
+            inline_keyboard=[
+                [
+                    InlineKeyboardButton(
+                        text=f"📨 Отправить запрос на {query}",
+                        callback_data="send_bearing_request"
+                    )
+                ]
+            ]
+        )
+
         if user_id not in BAD_USERS:
             search_time = datetime.now(ZoneInfo("Europe/Kyiv")).strftime("%d.%m.%Y %H:%M")
 
@@ -2062,7 +2075,12 @@ async def search_ads(message: Message, state: FSMContext):
         
         
         await message.answer(
-            "❌ Ничего не найдено\n\nВыберите действие:",
+            "❌ Ничего не найдено",
+            reply_markup=request_kb
+        )
+
+        await message.answer(
+            "Выберите действие:",
             reply_markup=main_kb
         )
         await state.clear()

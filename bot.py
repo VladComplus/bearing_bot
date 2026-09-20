@@ -408,6 +408,78 @@ def load_bad_users():
 
 BAD_USERS = load_bad_users()
 
+# =========================
+# ADMIN — BAD USERS
+# =========================
+
+@dp.message(Command("addtobad"))
+async def add_to_bad(message: Message):
+
+    if message.from_user.id != ADMIN_ID:
+        await message.answer("⛔ Доступ запрещен")
+        return
+
+    parts = message.text.split()
+
+    if len(parts) != 2 or not parts[1].isdigit():
+        await message.answer(
+            "❌ Использование:\n"
+            "/addtobad Telegram_ID"
+        )
+        return
+
+    user_id = int(parts[1])
+
+    if user_id in BAD_USERS:
+        await message.answer(
+            f"⚠️ Пользователь {user_id} уже находится в BAD USERS."
+        )
+        return
+
+    with open("bad-users.txt", "a", encoding="utf-8") as f:
+        f.write(f"{user_id}\n")
+
+    BAD_USERS.append(user_id)
+
+    await message.answer(
+        f"✅ Пользователь {user_id} добавлен в BAD USERS."
+    )
+
+
+@dp.message(Command("deletefrombad"))
+async def delete_from_bad(message: Message):
+
+    if message.from_user.id != ADMIN_ID:
+        await message.answer("⛔ Доступ запрещен")
+        return
+
+    parts = message.text.split()
+
+    if len(parts) != 2 or not parts[1].isdigit():
+        await message.answer(
+            "❌ Использование:\n"
+            "/deletefrombad Telegram_ID"
+        )
+        return
+
+    user_id = int(parts[1])
+
+    if user_id not in BAD_USERS:
+        await message.answer(
+            f"⚠️ Пользователь {user_id} не найден в BAD USERS."
+        )
+        return
+
+    BAD_USERS.remove(user_id)
+
+    with open("bad-users.txt", "w", encoding="utf-8") as f:
+        for bad_id in BAD_USERS:
+            f.write(f"{bad_id}\n")
+
+    await message.answer(
+        f"✅ Пользователь {user_id} удалён из BAD USERS."
+    )
+
 
 # =========================
 # STOP WORDS (V6 HARD FILTER)

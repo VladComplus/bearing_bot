@@ -2325,7 +2325,70 @@ async def get_request_note(message: Message, state: FSMContext):
         reply_markup=confirm_kb,
         parse_mode="HTML"
     )
-    
+
+# =========================
+# ЗАПРОС ПОСТАВЩИКАМ — ОТПРАВКА АДМИНУ
+# =========================
+
+@dp.callback_query(F.data == "confirm_bearing_request")
+async def confirm_bearing_request(
+    callback: CallbackQuery,
+    state: FSMContext
+):
+
+    data = await state.get_data()
+
+    search_request = data.get("search_request")
+    request_quantity = data.get("request_quantity")
+    request_payment = data.get("request_payment")
+    request_phone = data.get("request_phone")
+    request_contact = data.get("request_contact")
+    request_note = data.get("request_note", "")
+
+    user_id = callback.from_user.id
+    username = callback.from_user.username or "нет"
+
+    # Проверяем, есть ли пользователь в bad-users.txt
+    bad_mark = "⚠️ BAD USER\n\n" if user_id in BAD_USERS else ""
+
+    request_time = datetime.now(
+        ZoneInfo("Europe/Kyiv")
+    ).strftime("%d.%m.%Y %H:%M")
+
+    note_text = (
+        f"\n📝 Примечание: {request_note}"
+        if request_note
+        else ""
+    )
+
+    admin_msg = (
+        f"📨 <b>НОВЫЙ ЗАПРОС ПОСТАВЩИКАМ</b>\n\n"
+        f"{bad_mark}"
+        f"🧿 Подшипник: <b>{search_request}</b>\n"
+        f"🔢 Количество: {request_quantity}\n"
+        f"💳 Форма оплаты: {request_payment}\n"
+        f"📞 Телефон: {request_phone}\n"
+        f"👤 Контактное лицо: {request_contact}"
+        f"{note_text}\n\n"
+        f"👤 Username: @{username}\n"
+        f"🆔 Telegram ID: {user_id}\n"
+        f"🕒 {request_time}"
+    )
+
+    await bot.send_message(
+        ADMIN_ID,
+        admin_msg,
+        parse_mode="HTML"
+    )
+
+    await callback.message.answer(
+        "✅ Запрос отправлен поставщикам.",
+        reply_markup=main_kb
+    )
+
+    await state.clear()
+    await callback.answer()
+
 @dp.message(Form.name)
 async def get_name(message: Message, state: FSMContext):
     name = message.text.strip()

@@ -1,4 +1,4 @@
-# FINAL VERSION V6.8 (автоподбор производителя)
+# FINAL VERSION V6.9 (добавили отправку админу уведомления о посике)
 
 import asyncio
 import logging
@@ -1804,6 +1804,28 @@ async def search_ads(message: Message, state: FSMContext):
             found.append(row)
 
     if not found:
+
+        user_id = message.from_user.id
+        username = message.from_user.username or "нет"
+
+        if user_id not in BAD_USERS:
+            search_time = datetime.now().strftime("%d.%m.%Y %H:%M")
+
+            admin_msg = (
+                f"🔎 Поиск без результата\n\n"
+                f"🧿 Запрос: {query}\n"
+                f"👤 Username: @{username}\n"
+                f"🆔 Telegram ID: {user_id}\n"
+                f"🕒 {search_time}"
+            )
+            
+            await bot.send_message(
+                ADMIN_ID,
+                admin_msg
+            )
+
+        
+        
         await message.answer(
             "❌ Ничего не найдено\n\nВыберите действие:",
             reply_markup=main_kb

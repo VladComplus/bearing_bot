@@ -1989,7 +1989,17 @@ async def get_qty(message: Message, state: FSMContext):
         return
 
     await state.update_data(quantity=text)
-    await message.answer("Состояние:", reply_markup=condition_kb)
+    await message.answer("Наличие:", reply_markup=availability_kb)
+    await state.set_state(Form.availability)
+
+@dp.message(Form.availability)
+async def get_availability(message: Message, state: FSMContext):
+    await state.update_data(availability=message.text)
+
+    await message.answer(
+        "Состояние:",
+        reply_markup=condition_kb
+    )
     await state.set_state(Form.condition)
 
 @dp.message(Form.condition)

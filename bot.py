@@ -623,7 +623,7 @@ async def edit_find_ad(message: Message, state: FSMContext):
 
     cursor.execute("""
     SELECT id, type, name, manufacturer,
-           quantity, condition, price,
+           quantity, availability, condition, price,
            phone, desc, archived,
            channel_message_id
     FROM ads
@@ -656,19 +656,20 @@ async def edit_find_ad(message: Message, state: FSMContext):
     photo_count = cursor.fetchone()[0]
     conn.close()
 
-    status = "🔒 АРХИВ" if row[9] == 1 else "🟢 АКТИВ"
+    status = "🔒 АРХИВ" if row[10] == 1 else "🟢 АКТИВ"
 
-    desc_text = row[8] if row[8] else "—"
+    desc_text = row[9] if row[9] else "—"
 
     msg = (
         f"✏️ <b>РЕДАКТИРОВАНИЕ</b>\n\n"
         f"🧿 Маркировка: <b>{row[2]}</b>\n"
         f"🏭 Производитель: {row[3]}\n"
         f"🔢 Кол-во: {row[4]}\n"
-        f"⚙️ Состояние: {row[5]}\n"
-        f"💰 Цена: {row[6]}\n"
-        f"📞 Телефон: {row[7]}\n"
-        f"📖 Описание: {desc_text}\n"
+        f"📦 Наличие: {row[5]}\n"
+        f"⚙️ Состояние: {row[6]}\n"
+        f"💰 Цена: {row[7]}\n"
+        f"📞 Телефон: {row[8]}\n"
+        f"📖 Описание: {row[9]}\n"
         f"📷 Фото: {photo_count} шт.\n\n"
         f"🆔 {row[0]}\n"
         f"{status}"

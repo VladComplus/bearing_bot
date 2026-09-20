@@ -2157,7 +2157,7 @@ async def search_ads(message: Message, state: FSMContext):
         )
 
         await message.answer(
-            " ",
+            "☝️",
             reply_markup=main_kb
         )
         return

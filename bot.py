@@ -2317,7 +2317,7 @@ async def get_request_note(message: Message, state: FSMContext):
         f"📨 <b>Ваш запрос</b>\n\n"
         f"🧿 Подшипник: {data.get('search_request')}\n"
         f"🔢 Количество: {data.get('request_quantity')}\n"
-        f"💳 Оплата: {data.get('request_payment')}\n"
+        f"💳 Форма оплаты: {data.get('request_payment')}\n"
         f"📞 Телефон: {data.get('request_phone')}\n"
         f"👤 Контактное лицо: {data.get('request_contact')}"
         f"{note_text}\n\n"

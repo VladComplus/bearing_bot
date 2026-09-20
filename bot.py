@@ -379,6 +379,15 @@ def load_spec_bearings():
 
 SPEC_BEARINGS = load_spec_bearings()
 
+def load_bad_users():
+    try:
+        with open("bad-users.txt", "r", encoding="utf-8") as f:
+            return [int(line.strip()) for line in f if line.strip()]
+    except:
+        return []
+
+BAD_USERS = load_bad_users()
+
 
 # =========================
 # STOP WORDS (V6 HARD FILTER)

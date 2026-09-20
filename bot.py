@@ -244,6 +244,7 @@ def init_db():
         phone TEXT,
         desc TEXT,
         user_id INTEGER,
+        username TEXT,
         created_at TEXT,
         expires_at TEXT,
         archived INTEGER DEFAULT 0,
@@ -255,6 +256,12 @@ def init_db():
     # если колонка ещё отсутствует
     cursor.execute("PRAGMA table_info(ads)")
     columns = [row[1] for row in cursor.fetchall()]
+
+    if "username" not in columns:
+    cursor.execute("""
+    ALTER TABLE ads
+    ADD COLUMN username TEXT
+    """)
 
     if "manufacturer" not in columns:
         cursor.execute("""
@@ -2126,9 +2133,9 @@ async def publish_ad(message: Message, state: FSMContext):
         price, original_price,
         phone, original_phone,
         desc, original_desc,
-        user_id, created_at, expires_at, archived
+        user_id, username, created_at, expires_at, archived
     )
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0)
     """, (
         ad_id,
         data['type'],
@@ -2154,6 +2161,7 @@ async def publish_ad(message: Message, state: FSMContext):
         data['desc'],
 
         message.from_user.id,
+        message.from_user.username,
         now_dt.strftime("%Y-%m-%d %H:%M:%S"),
         (now_dt + timedelta(days=90)).strftime("%Y-%m-%d %H:%M:%S")
     ))

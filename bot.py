@@ -2280,6 +2280,52 @@ async def get_request_contact(message: Message, state: FSMContext):
 
     await state.set_state(Form.request_note)
 
+# =========================
+# ЗАПРОС ПОСТАВЩИКАМ — ПРИМЕЧАНИЕ
+# =========================
+
+@dp.message(Form.request_note)
+async def get_request_note(message: Message, state: FSMContext):
+
+    if message.text == "⏭ Пропустить":
+        await state.update_data(request_note="")
+    else:
+        await state.update_data(request_note=message.text.strip())
+
+    data = await state.get_data()
+
+    note_text = ""
+    if data.get("request_note"):
+        note_text = f"\n📝 Примечание: {data['request_note']}"
+
+    confirm_kb = InlineKeyboardMarkup(
+        inline_keyboard=[
+            [
+                InlineKeyboardButton(
+                    text="✅ Отправить",
+                    callback_data="confirm_bearing_request"
+                ),
+                InlineKeyboardButton(
+                    text="❌ Отмена",
+                    callback_data="cancel_bearing_request"
+                )
+            ]
+        ]
+    )
+
+    await message.answer(
+        f"📨 <b>Ваш запрос</b>\n\n"
+        f"🧿 Подшипник: {data.get('search_request')}\n"
+        f"🔢 Количество: {data.get('request_quantity')}\n"
+        f"💳 Оплата: {data.get('request_payment')}\n"
+        f"📞 Телефон: {data.get('request_phone')}\n"
+        f"👤 Контактное лицо: {data.get('request_contact')}"
+        f"{note_text}\n\n"
+        f"Отправить запрос?",
+        reply_markup=confirm_kb,
+        parse_mode="HTML"
+    )
+    
 @dp.message(Form.name)
 async def get_name(message: Message, state: FSMContext):
     name = message.text.strip()

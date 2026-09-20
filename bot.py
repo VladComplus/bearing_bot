@@ -2185,6 +2185,7 @@ async def publish_ad(message: Message, state: FSMContext):
         f"🧿 <b>{data['name']}</b>\n"
         f"🏭 Производитель: {data['manufacturer']}\n"
         f"🔢 Кол-во: {data['quantity']}\n"
+        f"📦 Наличие: {data['availability']}\n"
         f"⚙️ Состояние: {condition}\n"
         f"💰 Цена: {data['price']}\n"
         f"📞 {data['phone']}"

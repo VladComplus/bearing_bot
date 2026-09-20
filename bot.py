@@ -2389,6 +2389,25 @@ async def confirm_bearing_request(
     await state.clear()
     await callback.answer()
 
+# =========================
+# ЗАПРОС ПОСТАВЩИКАМ — ОТМЕНА
+# =========================
+
+@dp.callback_query(F.data == "cancel_bearing_request")
+async def cancel_bearing_request(
+    callback: CallbackQuery,
+    state: FSMContext
+):
+
+    await state.clear()
+
+    await callback.message.answer(
+        "❌ Запрос отменён.",
+        reply_markup=main_kb
+    )
+
+    await callback.answer()
+
 @dp.message(Form.name)
 async def get_name(message: Message, state: FSMContext):
     name = message.text.strip()

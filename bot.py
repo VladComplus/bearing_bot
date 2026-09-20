@@ -78,7 +78,8 @@ async def db_view(message: Message):
            price, original_price,
            phone, original_phone,
            desc, original_desc,
-           archived, created_at, channel_message_id
+           archived, created_at, channel_message_id,
+           user_id, username
     FROM ads
     WHERE id = ?
     """, (ad_id,))
@@ -122,7 +123,9 @@ async def db_view(message: Message):
         f"📖 Описание: {original_desc}\n\n"
 
         f"🆔 {row[0]}\n"
-        f"📨 MSG_ID: {row[17]}"
+        f"📨 MSG_ID: {row[17]}\n"
+        f"👤 Username: @{row[19] if row[19] else 'нет'}\n"
+        f"🆔 Telegram ID: {row[18]}"
     )
 
     await message.answer(

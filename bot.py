@@ -529,6 +529,7 @@ class Form(StatesGroup):
     request_payment = State()
     request_phone = State()
     request_contact = State()
+    request_note = State()
 
     # ADMIN EDIT
     edit_ad_id = State()
@@ -2253,6 +2254,31 @@ async def get_request_phone(message: Message, state: FSMContext):
     )
 
     await state.set_state(Form.request_contact)
+
+# =========================
+# ЗАПРОС ПОСТАВЩИКАМ — КОНТАКТНОЕ ЛИЦО
+# =========================
+
+@dp.message(Form.request_contact)
+async def get_request_contact(message: Message, state: FSMContext):
+
+    await state.update_data(request_contact=message.text.strip())
+
+    note_kb = ReplyKeyboardMarkup(
+        keyboard=[
+            [
+                KeyboardButton(text="⏭ Пропустить")
+            ]
+        ],
+        resize_keyboard=True
+    )
+
+    await message.answer(
+        "📝 Примечание (необязательно):",
+        reply_markup=note_kb
+    )
+
+    await state.set_state(Form.request_note)
 
 @dp.message(Form.name)
 async def get_name(message: Message, state: FSMContext):

@@ -1809,7 +1809,7 @@ async def search_ads(message: Message, state: FSMContext):
         username = message.from_user.username or "нет"
 
         if user_id not in BAD_USERS:
-            search_time = datetime.now().strftime("%d.%m.%Y %H:%M")
+            search_time = datetime.now(ZoneInfo("Europe/Kyiv")).strftime("%d.%m.%Y %H:%M")
 
             admin_msg = (
                 f"🔎 Поиск без результата\n\n"

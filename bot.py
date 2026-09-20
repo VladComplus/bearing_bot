@@ -528,6 +528,7 @@ class Form(StatesGroup):
     request_quantity = State()
     request_payment = State()
     request_phone = State()
+    request_contact = State()
 
     # ADMIN EDIT
     edit_ad_id = State()
@@ -2228,6 +2229,30 @@ async def get_request_payment(message: Message, state: FSMContext):
     )
 
     await state.set_state(Form.request_phone)
+
+# =========================
+# ЗАПРОС ПОСТАВЩИКАМ — ТЕЛЕФОН
+# =========================
+
+@dp.message(Form.request_phone)
+async def get_request_phone(message: Message, state: FSMContext):
+
+    phone = message.text.strip()
+
+    if not re.fullmatch(r"0\d{9}", phone):
+        await message.answer(
+            "❌ Неверный номер телефона.\n"
+            "Введите 10 цифр, начиная с 0."
+        )
+        return
+
+    await state.update_data(request_phone=phone)
+
+    await message.answer(
+        "👤 Контактное лицо:"
+    )
+
+    await state.set_state(Form.request_contact)
 
 @dp.message(Form.name)
 async def get_name(message: Message, state: FSMContext):

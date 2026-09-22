@@ -3104,8 +3104,8 @@ async def archive_old_ads():
         ).strftime("%Y-%m-%d %H:%M:%S")
 
         cursor.execute("""
-        SELECT id, name, quantity, condition, price,
-               created_at, channel_message_id
+        SELECT id, name, manufacturer, quantity, availability,
+               condition, channel_message_id
         FROM ads
         WHERE expires_at < ?
         AND archived = 0
@@ -3169,9 +3169,10 @@ async def archive_old_ads():
                 text = (
                     f"🔒 <b>АРХИВНОЕ ОБЪЯВЛЕНИЕ</b>\n\n"
                     f"🧿 <b>{row[1]}</b>\n"
-                    f"🔢 Кол-во: {row[2]}\n"
-                    f"⚙️ Состояние: {row[3]}\n"
-                    f"💰 Цена: {row[4]}\n\n"
+                    f"🏭 Производитель: {row[2]}\n"
+                    f"🔢 Кол-во: {row[3]}\n"
+                    f"📦 Наличие: {row[4]}\n"
+                    f"⚙️ Состояние: {row[5]}\n\n"
                     f"📩 Связаться с администратором"
                 )
 

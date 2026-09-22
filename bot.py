@@ -2122,16 +2122,26 @@ async def search_ads(message: Message, state: FSMContext):
 
         await state.update_data(search_request=query)
 
+        
         request_kb = InlineKeyboardMarkup(
             inline_keyboard=[
+                [        
+                    InlineKeyboardButton(
+                        text="📨 Отправить поставщикам",
+                        callback_data="send_bearing_request"
+                    )    
+                ],
                 [
                     InlineKeyboardButton(
-                        text=f"📨 Отправить поставщикам запрос на {query}",
+                        text=f"запрос на {query}",
                         callback_data="send_bearing_request"
-                    )
+                    )        
                 ]
-            ]
+            ]    
         )
+
+
+        
 
         if user_id not in BAD_USERS:
             search_time = datetime.now(ZoneInfo("Europe/Kyiv")).strftime("%d.%m.%Y %H:%M")

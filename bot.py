@@ -2501,11 +2501,11 @@ async def get_name(message: Message, state: FSMContext):
         return
 
     if not has_min_two_digits(name):
-        await message.answer("❌ Ошибка ввод")
+        await message.answer("❌ Ошибка ввода. Повторите ввод")
         return
 
     if contains_stop_word(name):
-        await message.answer("❌ Ошибка ввод")
+        await message.answer("❌ Введены запрещённые символы. Повторите ввод")
         return
 
     await state.update_data(name=name)

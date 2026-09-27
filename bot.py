@@ -1,4 +1,4 @@
-# FINAL VERSION V6.10 (добавили отправку админу уведомления о посике)
+# FINAL VERSION V6.15 (добавили watermark)
 
 import asyncio
 import logging
@@ -18,6 +18,94 @@ from aiogram.types import (
 from aiogram.filters import Command
 from aiogram.fsm.state import StatesGroup, State
 from aiogram.fsm.context import FSMContext
+
+from PIL import Image
+from io import BytesIO
+
+# =========================
+# WATERMARK
+# =========================
+
+WATERMARK_PATH = "bot-watermark.png"
+
+
+def add_watermark(image_bytes: bytes) -> BytesIO:
+    """
+    Накладывает водяной знак на всю фотографию
+    сеткой 3 → 2 → 3 → 2 → ...
+    """
+
+    photo = Image.open(BytesIO(image_bytes)).convert("RGBA")
+
+    photo_width, photo_height = photo.size
+
+    # Водяной знак 600 x 165.
+    # В полный ряд помещаем 3 знака.
+    watermark_width = photo_width // 3
+    watermark_height = round(watermark_width * 165 / 600)
+
+    # Оригинальный водяной знак не изменяем
+    watermark = Image.open(WATERMARK_PATH).convert("RGBA")
+
+    watermark = watermark.resize(
+        (watermark_width, watermark_height),
+        Image.Resampling.LANCZOS
+    )
+
+    # Прозрачный слой для сетки
+    layer = Image.new(
+        "RGBA",
+        (photo_width, photo_height),
+        (0, 0, 0, 0)
+    )
+
+    row = 0
+    y = 0
+
+    while y < photo_height:
+
+        if row % 2 == 0:
+            # 1-й, 3-й, 5-й ряд — три знака
+            x_positions = [
+                0,
+                watermark_width,
+                watermark_width * 2
+            ]
+
+        else:
+            # 2-й, 4-й, 6-й ряд — два знака
+            # со смещением на половину ширины
+            x_positions = [
+                watermark_width // 2,
+                watermark_width + watermark_width // 2
+            ]
+
+        for x in x_positions:
+            layer.alpha_composite(
+                watermark,
+                (x, y)
+            )
+
+        y += watermark_height
+        row += 1
+
+    # Накладываем сетку на фотографию
+    result = Image.alpha_composite(photo, layer)
+
+    # Возвращаем готовую фотографию в памяти
+    output = BytesIO()
+
+    result = result.convert("RGB")
+    result.save(
+        output,
+        format="JPEG",
+        quality=95
+    )
+
+    output.seek(0)
+
+    return output
+
 
 TOKEN = os.getenv("BOT_TOKEN")
 CHANNEL_ID = -1003955162793

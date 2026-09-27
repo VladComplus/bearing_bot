@@ -1837,10 +1837,28 @@ async def edit_finish_photos(message: Message, state: FSMContext):
 
     for index, file_id in enumerate(photos):
 
+        # Получаем информацию о файле Telegram
+        file = await bot.get_file(file_id)
+
+        # Скачиваем оригинальную фотографию
+        file_data = BytesIO()
+        await bot.download_file(file.file_path, file_data)
+
+        # Накладываем водяной знак
+        watermarked_photo = add_watermark(
+            file_data.getvalue()
+        )
+
+        # Подготавливаем обработанную фотографию
+        input_file = BufferedInputFile(
+            watermarked_photo.getvalue(),
+            filename=f"edited_watermarked_{index + 1}.jpg"
+        )
+
         if index == 0:
             media.append(
                 InputMediaPhoto(
-                    media=file_id,
+                    media=input_file,
                     caption=text,
                     parse_mode="HTML"
                 )
@@ -1848,7 +1866,7 @@ async def edit_finish_photos(message: Message, state: FSMContext):
         else:
             media.append(
                 InputMediaPhoto(
-                    media=file_id
+                    media=input_file
                 )
             )
 

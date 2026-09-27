@@ -13,7 +13,7 @@ from aiogram.types import (
     Message, ReplyKeyboardMarkup, KeyboardButton,
     InlineKeyboardMarkup, InlineKeyboardButton,
     CallbackQuery, ReplyKeyboardRemove,
-    InputMediaPhoto
+    InputMediaPhoto, BufferedInputFile
 )
 from aiogram.filters import Command
 from aiogram.fsm.state import StatesGroup, State
@@ -2931,17 +2931,38 @@ async def publish_ad(message: Message, state: FSMContext):
         media = []
 
         for index, file_id in enumerate(photos):
+
+            # Получаем информацию о файле Telegram
+            file = await bot.get_file(file_id)
+
+            # Скачиваем оригинальную фотографию
+            file_data = BytesIO()
+            await bot.download_file(file.file_path, file_data)
+
+            # Накладываем водяной знак
+            watermarked_photo = add_watermark(
+                file_data.getvalue()
+            )
+
+            # Подготавливаем обработанную фотографию
+            input_file = BufferedInputFile(
+                watermarked_photo.getvalue(),
+                filename=f"watermarked_{index + 1}.jpg"
+            )
+
             if index == 0:
                 media.append(
                     InputMediaPhoto(
-                        media=file_id,
+                        media=input_file,
                         caption=text,
                         parse_mode="HTML"
                     )
                 )
             else:
                 media.append(
-                    InputMediaPhoto(media=file_id)
+                    InputMediaPhoto(
+                        media=input_file
+                    )
                 )
 
         sent_messages = await bot.send_media_group(
@@ -2970,8 +2991,6 @@ async def publish_ad(message: Message, state: FSMContext):
         # Первое сообщение медиагруппы используем
         # как основное сообщение объявления
         channel_message_id = sent_messages[0].message_id
-
-
 
     else:
 
